@@ -1,90 +1,151 @@
-# Client Dev Sandbox — Research Corpus
+# Client Dev Sandbox
 
-Research corpus for a client project: a **self-contained Docker dev sandbox with an embedded
-agentic intelligence layer** — admin web control plane, Entra SSO, web VS Code, embedded +
-provisioned LLMs, hierarchical audit trail, snapshot/rollback of agent-driven overhauls,
-per-project encrypted vaults, zero-inbound-port exposure. Feeds the upcoming PRD/ADR/DDD work
-(client brief expected ~late July 2026).
+A self-contained dev sandbox for a client team. A primary user sees a chat bubble in their own
+dashboard and hands the agent problems bigger than their interface. An admin runs the box through
+**Foreman**, the web control plane in this repo. The agent layer does large, structural changes to
+the sandbox itself, each one bracketed by a snapshot it can roll back. Everything shipped is
+permissively licensed.
 
-**Hard constraint: permissive licences only (MIT / Apache-2.0 / BSD) in anything shipped.**
-Every licence claim in this corpus was verified against the GitHub API or a raw LICENSE read on
-**2026-07-16** — several popular projects' badges lie (details per file).
+This README is the map. It shows what the product is, what is built so far, and where each piece
+lives.
 
-- Vision: [`docs/vision-brief.md`](docs/vision-brief.md)
-- Gaps & coverage: [`docs/gap-analysis.md`](docs/gap-analysis.md)
-- Questions for the client: [`docs/client-questions.md`](docs/client-questions.md)
-- Machine-readable round-1 dataset: [`data/options.json`](data/options.json)
+Two rules shape every decision, both from the client:
 
-## Corpus layout
+- **A distillation, not agentbox.** A plain container with few moving parts and TOML-gated
+  bundles. The maximalist in-house machine (agentbox) stays in-house.
+- **Maintainability beats capability.** Fewest tools, one per job, narrow interfaces we own.
 
-| Directory | Contents | Round |
+## The whole system
+
+```mermaid
+flowchart TB
+  subgraph client[Client dashboard]
+    bubble["Chat bubble\n(primary user)"]
+  end
+  subgraph box["Sandbox container"]
+    foreman["Foreman\ncontrol plane (this repo)"]
+    engine["Agent engine\npi (MIT)"]
+    ledger["Work ledger\nbeads"]
+    code["Web VS Code\ncode-server"]
+    audit[("Write-only\naudit sidecar")]
+    vaults[("gocryptfs\nproject vaults")]
+  end
+  admin(["Admin / CTO"]) -->|Entra SSO| foreman
+  bubble -->|prompt| engine
+  foreman -->|provision, approve, roll back| engine
+  engine --> ledger
+  engine -->|hooks| audit
+  engine --> code
+  foreman -->|unlock| vaults
+  engine -.->|metered API key| providers[["Anthropic / OpenAI / local"]]
+```
+
+The primary user never sees Foreman. Foreman is for the person who owns the box: provisioning,
+watching activity, approving or rolling back overhauls, reading the audit trail.
+
+## Foreman — the control plane (built, mock-backed)
+
+Six tabs, each opening with plain guidance on when and why to use it. Built as a Vite + React +
+TypeScript app against a mock data seam, so the design can be judged before anything is
+containerised (see [ADR-001](docs/reference/adr/ADR-001-stack-and-mock-first.md)).
+
+| Tab | What it answers | When to use it |
 |---|---|---|
-| `corpus/01-anthropic-native/` | Claude Code web / Cowork reference architecture, srt sandbox runtime, official devcontainer pattern | 1 |
-| `corpus/02-claude-code-web-uis/` | HolyClaude, CloudCLI (AGPL flag), happy, agentapi, archived options | 1 |
-| `corpus/03-agent-platforms/` | OpenHands, vibe-kanban, crystal, Sculptor | 1 |
-| `corpus/04-sandbox-infra/` | E2B, Daytona (no licence!), microsandbox, Cloudflare sandbox-sdk, managed services | 1 |
-| `corpus/05-identity-and-access/` | Entra SSO architecture, per-project encrypted vaults | 2 |
-| `corpus/06-network-exposure/` | Zero-inbound tunnels + Entra, 3-posture matrix | 2 |
-| `corpus/07-models-and-gateways/` | Embedded local models (Gemma 4!), provider gateways | 2 |
-| `corpus/08-distribution/` | Desktop launcher, Docker Desktop trap, server-vs-local | 2 |
-| `corpus/09-observability-audit/` | Audit/identity architecture (specialist), observability tooling | 2 |
-| `corpus/10-architecture/` | Snapshot/rollback architecture (specialist) | 2 |
-| `corpus/11-ecosystem/` | Nostr/Solid/chat-widgets, prior-art sweep, TypeScript stack | 2 |
+| **Overview** | Is the box healthy and busy? | First thing each session |
+| **Visualiser** | Who did what, to what, when? | Trace an owner's blast radius, spot a rogue agent |
+| **Activity** | What is happening right now? | Follow a live session, audit one agent |
+| **Work** | What is the agent doing over the long run? | Track overhaul work, approve a gated overhaul |
+| **Configuration** | What can I change, and how does it land? | Provision a client, change providers, plan a rebuild |
+| **Operations** | Can I undo this, and prove what changed? | Roll back, verify the audit chain, unlock a vault |
 
-## Headline findings
+### The signature idea: apply-class
 
-1. **The combination is whitespace.** No surveyed product does all six pillars; nothing at all
-   does "agent overhauls its own platform tooling with snapshot+rollback". Closest three:
-   Coder (AGPL — reference only), OpenHands (MIT), AnythingLLM (MIT). No single Microsoft SKU
-   competes — their stack is cloud/subscription-bound at every layer, so a self-contained
-   client-owned box is a defensible differentiator.
-2. **Licence badges lie.** Verified-by-reading-LICENSE traps found: Open WebUI (custom
-   branding-restricted licence), immudb (BSL 1.1, not Apache), Redis ≥8 (RSAL/SSPL/AGPL —
-   use Valkey), Daytona (no LICENSE file at all), NLUX (modified MPL), Typebot (FSL),
-   Pangolin (AGPL/commercial), NetBird control plane (AGPL), HashiCorp Vault (BUSL → OpenBao),
-   AutoGPT platform dir (Polyform Shield), asciinema CLI (GPL-3) vs its player (Apache-2.0),
-   util-linux `script.c` (BSD-3) vs `scriptreplay.c` (GPL-2+).
-3. **Two assumptions died in research.** Gemma is no longer categorically encumbered — Gemma 4
-   (Apr 2026) is Apache-2.0; the Terms-of-Use trap only applies ≤3n. And TS7 went GA
-   2026-07-08 but has no stable programmatic API until 7.1 — build on tsc 5/6, run `tsgo` in CI.
+Every configuration option is one of three classes, shown as a coloured badge at the point of
+change, so the operator always knows whether a toggle is instant or triggers a rebuild.
 
-## Emerging reference architecture (hypothesis for the PRD — not yet decided)
+```mermaid
+flowchart LR
+  change([Change a setting]) --> q{Apply-class}
+  q -->|live| l["Applies now\nto the running box"]
+  q -->|session| s["Applies to\nnew sessions"]
+  q -->|rebuild| r["Write TOML → build image\n→ healthcheck → blue/green\n→ auto-rollback on failure"]
+  style l fill:#0e2b28,stroke:#33c2b4
+  style s fill:#2b2410,stroke:#f0a53a
+  style r fill:#2b1216,stroke:#f0596b
+```
 
-| Layer | Choice | Source |
-|---|---|---|
-| Config | agentbox.toml adapter-slot pattern · smol-toml + c12 + zod v4 · first-boot wizard writes TOML (Coolify pattern, Portainer time-boxed admin claim) | in-house · 11 · r6 |
-| Identity | Entra App Roles → oauth2-proxy (`ms_entra_id`) → Traefik/Caddy forward-auth; internal gateway-signed JWT; `entra:{tid}:{oid}` as the immutable seed | 05 · 09 |
-| Core stack | Node 24 LTS control plane on Hono (+`hc` typed client) · Bun for agent supervision + single-binary sidecars · tsc 5/6 now, TS7 at 7.1 | 11 |
-| Surfaces | code-server behind the proxy · LibreChat (MIT) or bespoke chat UI · **deep-chat** (MIT) script-tag bubble in the client dashboard → **pi RPC via the Hono control plane** (agentapi demoted to a swap-optionality adapter) | 02 · 05 · 11 · 12 |
-| Models | Vercel AI SDK (Apache-2.0) in-process, provisioned from TOML+dotenv · embedded Qwen3-4B/8B or Gemma-4-E4B on llama.cpp / Docker Model Runner (8 vCPU/16GB) · **metered API keys only — never subscription OAuth** | 07 · 11 · 12 |
-| Agent layer | **pi (MIT, earendil-works)** as the embedded engine — RPC/SDK modes driven by the control plane, audit/identity injection via its tool_call/tool_result hooks — under **srt** inside the hardened container (devcontainer egress-firewall pattern); opencode (MIT) fallback; orchestration patterns from ruflo | 12 · 01 |
-| Toolchain | Three TOML-gated bundles: Biome+Vite+Vitest+Playwright · uv (3.11/12/13)+JupyterLab · Typst+Tectonic (texlive-full = air-gap profile) — 11 baked binaries, libraries stay project-level | 13 |
-| Work ledger | **beads/`bd`** (MIT) behind a narrow adapter boundary — embedded-Dolt per session, `BEADS_ACTOR` seeded from Entra identity, bead IDs as foreign keys in audit events, `human` gates for overhaul approval; backlog.md as simpler fallback | 12 |
-| Snapshots | "Three planes, one supervisor": git+local registry (system), restic (user data), WORM (audit) · blue/green cutover with data-compat probe · supervisor in a recovery partition outside the agent's reach | 10 |
-| Audit | Claude Code hooks → WAL spool → **topologically write-only sidecar** (two networks) · hash-chained JSONL + hourly Ed25519 anchors off-box · OTel (traces beta) → collector → ClickHouse · Helicone/OpenLIT UI · `script --log-io` + chrome-devtools screencast + rrweb | 09 |
-| Vaults | gocryptfs (MIT) cipherdirs · v1 decrypt-on-unlock (zero privileges) · DEKs wrapped in client's Azure Key Vault, released on Entra session | 05 |
-| Network | Loopback-only host binding + cloudflared + **Cloudflare Access→Entra** (posture a) · Entra Private Access if Microsoft-mandated (b) · OpenZiti self-host (c) | 06 |
-| Distribution | Likely server-hosted + thin URL shell/PWA (kills Docker Desktop licensing + WSL2/GPO friction structurally); Electron-over-Podman/Rancher only if offline/local is required | 08 |
+Rebuild is the only class that can break the box, so it is the only one routed through a reviewed
+plan with a snapshot and auto-rollback. Full rationale in
+[ADR-002](docs/reference/adr/ADR-002-apply-class-model.md).
 
-**Cross-stream conflict resolutions**: LiteLLM (r2) superseded by Vercel AI SDK (r9) for the
-TS-first constraint — both permissive, language/ops call. immudb corrected from Apache-2.0 (s2)
-to BSL 1.1 (r5, LICENSE read). Nostr for internal audit mirroring: r4's honest answer is
-"protocol enthusiasm — use an internal bus" *unless* the client wants user-sovereign data
-portability; r5's anchoring of audit head-hashes to our existing relay is the one lightweight
-legitimate use either way.
+## Repo map
 
-## Round-1 quick matrix (original single-purpose-container survey)
+```
+devContainer/
+├── README.md                 ← you are here: the design map
+├── app/                      ← Foreman, the control-plane UI (Vite + React + TS)
+│   └── src/
+│       ├── domain/types.ts   ← frozen domain contract
+│       ├── data/adapter.ts    ← the seam: swap mock for a real backend here alone
+│       ├── data/mock.ts       ← deterministic seeded world (no backend)
+│       ├── ui/primitives.tsx  ← shared components (ApplyBadge, OwnerTag, WhenToUse…)
+│       └── features/          ← one directory per tab (built by a mesh of agents)
+├── docs/
+│   ├── vision-brief.md        ← the product vision and steers
+│   ├── gap-analysis.md         ← what research covered, what is parked
+│   ├── client-questions.md     ← questions for the client brief
+│   └── reference/
+│       ├── prd/                ← product requirements (PRD-000 shape, PRD-001 control plane)
+│       ├── adr/                ← architecture decisions (001 stack, 002 apply-class, 003 visualiser)
+│       ├── ddd/                ← domain model (DDD-001)
+│       └── future/             ← stubs for milestones not yet built
+├── corpus/                    ← the research corpus (13 sections, licence-verified)
+└── data/options.json          ← machine-readable option dataset
+```
 
-✅ Permissive & healthy: OpenHands (MIT, 81k★) · code-server (MIT, 78k★) · vibe-kanban
-(Apache-2.0) · happy (MIT) · E2B (Apache-2.0) · microsandbox (Apache-2.0) · srt (Apache-2.0) ·
-agentapi (MIT) · cloudflare/sandbox-sdk (Apache-2.0).
-⚠️ Flagged: claudecodeui/CloudCLI (AGPL) · HolyClaude (MIT shell over AGPL UI) · Daytona (no
-licence) · opcode/claude-squad (AGPL) · sugyan webui + omnara + textcortex (archived) ·
-anthropics/claude-code `.devcontainer` (proprietary files, reimplementable pattern).
+## Documents
 
-## Conventions
+Start with the shape, then the control-plane specifics:
 
-One option per file; YAML frontmatter with `verified:` date — update when refreshing. Round-2
-files carry `researcher:` provenance (nine Sonnet researchers + two Opus specialists,
-fan-out/fan-in 2026-07-16). Add new findings as new files; corrections edit the original file
-with a note citing the correcting stream.
+- [PRD-000 — Product shape and roadmap](docs/reference/prd/PRD-000-product-shape.md)
+- [PRD-001 — Control plane](docs/reference/prd/PRD-001-control-plane.md)
+- [DDD-001 — Domain model](docs/reference/ddd/DDD-001-control-plane-domain.md)
+- ADR [001 stack](docs/reference/adr/ADR-001-stack-and-mock-first.md) ·
+  [002 apply-class](docs/reference/adr/ADR-002-apply-class-model.md) ·
+  [003 visualiser](docs/reference/adr/ADR-003-visualiser-rendering.md)
+- [Future stubs](docs/reference/future/ROADMAP-STUBS.md)
+
+## Roadmap
+
+```mermaid
+flowchart LR
+  M1["M1 · Control plane UI\n(mock-backed) ✓ now"] --> M2["M2 · Backend\nHono + adapters"]
+  M2 --> M3["M3 · Agent engine\npi embed"]
+  M3 --> M4["M4 · Container\nrebuild + rollback"]
+  M4 --> M5["M5 · Identity\nEntra + tunnels"]
+  M5 --> M6["M6 · Audit + vaults"]
+  M6 --> M7["M7 · Chat bubble"]
+  style M1 fill:#12233b,stroke:#5b8cff
+```
+
+## Research corpus
+
+The design rests on a licence-verified survey of the field (all claims checked against the GitHub
+API or a raw LICENSE read on 2026-07-16; several popular projects' badges are wrong). Highlights:
+the agent engine is **pi (MIT)** rather than the proprietary Claude Code CLI; the work ledger is
+**beads (MIT)** behind a narrow interface; **Gemma 4 is Apache-2.0** so the embedded model is
+licence-clean. Full detail and the traps found (Open WebUI's custom licence, immudb's BSL, Redis
+8's tri-licence, Daytona shipping no licence at all) are in [`corpus/`](corpus/), indexed by
+[`corpus/README.md`](corpus/README.md).
+
+## Running Foreman
+
+```bash
+cd app
+pnpm install
+pnpm dev        # http://localhost:5173
+```
+
+No backend needed. The app renders a deterministic mock world seeded from one PRNG, so every load
+shows the same sandbox. Swapping to a real backend later is a rewrite of `app/src/data/adapter.ts`
+and nothing else.

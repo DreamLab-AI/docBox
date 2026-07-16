@@ -1,0 +1,49 @@
+/* Operations feature — local styles for the few things inline styles can't do:
+   keyframes and hover/focus states. Scoped with an `ops-` prefix to avoid
+   clashing with the global token stylesheet. Reduced-motion is already handled
+   globally in tokens.css (it neutralises animation-duration). */
+
+@keyframes ops-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.ops-pulse { animation: ops-pulse 1.4s ease-in-out infinite; }
+
+@keyframes ops-spin {
+  to { transform: rotate(360deg); }
+}
+.ops-spin {
+  display: inline-block;
+  width: 13px; height: 13px;
+  border: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ops-spin 0.85s linear infinite;
+}
+
+/* Audit rows: quiet by default, lift on hover so a record is easy to track. */
+.ops-audit-row { transition: background 120ms ease; }
+.ops-audit-row:hover { background: var(--bg-2); }
+
+/* Owner filter chips + sub-tab pills. */
+.ops-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 100px;
+  background: var(--bg-2); color: var(--fg-1);
+  border: 1px solid var(--line); cursor: pointer;
+  font-size: var(--fs-sm); font-weight: 600;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.ops-chip:hover { background: var(--bg-3); color: var(--fg-0); }
+.ops-chip[aria-pressed='true'],
+.ops-chip[aria-selected='true'] {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--fg-0);
+}
+
+/* Modal backdrop fade. */
+@keyframes ops-fade { from { opacity: 0; } to { opacity: 1; } }
+.ops-backdrop { animation: ops-fade 140ms ease; }
+@keyframes ops-rise { from { transform: translateY(6px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.ops-dialog { animation: ops-rise 160ms ease; }

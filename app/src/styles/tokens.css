@@ -1,0 +1,117 @@
+/* Foreman design tokens. One source of truth for colour, type, spacing.
+   Dark-first, calm, dense-but-legible. WCAG AA on text pairs. */
+
+:root {
+  /* Surfaces — near-black with cool cast, layered by elevation */
+  --bg-0: #0b0d12;   /* app background */
+  --bg-1: #121620;   /* panel */
+  --bg-2: #1a1f2b;   /* raised card */
+  --bg-3: #232a39;   /* hover / input */
+  --line: #2c3444;   /* hairline borders */
+  --line-strong: #3a4457;
+
+  /* Text */
+  --fg-0: #eef2f8;   /* primary */
+  --fg-1: #aeb8c8;   /* secondary */
+  --fg-2: #6b7688;   /* muted / captions */
+
+  /* Brand + accents (also the visualiser palette anchors) */
+  --accent: #5b8cff;      /* primary action, live */
+  --accent-dim: #3a5fb0;
+  --violet: #a06bff;      /* agents */
+  --teal: #33c2b4;        /* elements / ok */
+  --amber: #f0a53a;       /* session-apply, pending */
+  --rose: #f0596b;        /* rebuild, danger, failed */
+  --green: #46c273;       /* ok, promoted */
+
+  /* Apply-class semantic colours (the product's core distinction) */
+  --apply-live: var(--teal);
+  --apply-session: var(--amber);
+  --apply-rebuild: var(--rose);
+
+  /* Owner hues (stable, assigned in mock data) */
+  --owner-a: #5b8cff;
+  --owner-b: #33c2b4;
+  --owner-c: #f0a53a;
+  --owner-d: #a06bff;
+
+  /* Type */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --fs-xs: 11px;
+  --fs-sm: 12.5px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 28px;
+  --lh: 1.5;
+
+  /* Space scale (4px base) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+
+  --radius: 8px;
+  --radius-sm: 5px;
+  --radius-lg: 14px;
+
+  --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.25);
+  --focus: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--accent);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg-0);
+  color: var(--fg-0);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  line-height: var(--lh);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+button { font-family: inherit; }
+:focus-visible { outline: none; box-shadow: var(--focus); }
+
+/* Utility primitives used across modules */
+.mono { font-family: var(--font-mono); }
+.muted { color: var(--fg-2); }
+.secondary { color: var(--fg-1); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: var(--s-1);
+  padding: 2px 8px; border-radius: 100px;
+  font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0.02em;
+  border: 1px solid var(--line-strong);
+}
+.badge-live { color: var(--apply-live); border-color: color-mix(in srgb, var(--apply-live) 45%, transparent); background: color-mix(in srgb, var(--apply-live) 12%, transparent); }
+.badge-session { color: var(--apply-session); border-color: color-mix(in srgb, var(--apply-session) 45%, transparent); background: color-mix(in srgb, var(--apply-session) 12%, transparent); }
+.badge-rebuild { color: var(--apply-rebuild); border-color: color-mix(in srgb, var(--apply-rebuild) 45%, transparent); background: color-mix(in srgb, var(--apply-rebuild) 12%, transparent); }
+
+.card {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  background: var(--bg-2); color: var(--fg-0);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.btn:hover { background: var(--bg-3); }
+.btn-primary { background: var(--accent-dim); border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent); }
+.btn-danger { background: color-mix(in srgb, var(--rose) 20%, var(--bg-2)); border-color: var(--rose); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
