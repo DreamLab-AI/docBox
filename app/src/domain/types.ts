@@ -162,3 +162,25 @@ export interface SystemStatus {
   localModel: string;
   providersOnline: string[];
 }
+
+/** How a feature's AI work is processed. `local` keeps data in the box (private);
+ *  the others send to a cloud provider. This is the per-feature privacy switch. */
+export type ProcessingRoute = 'local' | 'anthropic' | 'openai' | 'mistral' | 'gemini';
+
+export type OcrStatus = 'pending' | 'processing' | 'done' | 'review' | 'failed';
+
+export interface DocumentInfo {
+  id: string;
+  name: string;              // filename
+  ownerId: string;           // who uploaded it
+  project: string;           // which project/vault it belongs to
+  sizeKb: number;
+  pages: number;
+  mime: string;              // application/pdf, image/png, ...
+  uploadedAt: number;
+  ocr: OcrStatus;
+  ocrRoute: ProcessingRoute; // where the OCR ran (local = private)
+  handwriting: boolean;      // detected handwritten content
+  confidence?: number;       // 0..1, lowest-field confidence when OCR is done
+  fieldsForReview?: number;  // count of low-confidence fields routed to human review
+}

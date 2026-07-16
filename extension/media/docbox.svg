@@ -1,0 +1,6 @@
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- Activity-bar icon. Monochrome: VS Code recolours it via the theme, so a
+       single fill in currentColor is all it needs. A boxed document. -->
+  <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"
+    d="M4 2.75A1.75 1.75 0 0 1 5.75 1h7.19c.46 0 .9.18 1.23.51l4.31 4.31c.33.33.52.78.52 1.24V21.25A1.75 1.75 0 0 1 17.25 23H5.75A1.75 1.75 0 0 1 4 21.25V2.75Zm1.75-.25a.25.25 0 0 0-.25.25v18.5c0 .14.11.25.25.25h11.5a.25.25 0 0 0 .25-.25V8h-3.75A1.75 1.75 0 0 1 13 6.25V2.5H5.75ZM14.5 3.06 16.94 5.5H14.5V3.06ZM7.5 11.5a.75.75 0 0 0 0 1.5h8a.75.75 0 0 0 0-1.5h-8Zm0 3.5a.75.75 0 0 0 0 1.5h8a.75.75 0 0 0 0-1.5h-8Z" />
+</svg>

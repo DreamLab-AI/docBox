@@ -16,7 +16,7 @@ import { parse as parseToml, stringify as stringifyToml } from 'smol-toml';
 // Single source of truth: the app's deterministic mock world.
 import {
   owners, sessions, agents, elements, actions, configOptions,
-  snapshots, beads, audit, vaults, systemStatus, NOW,
+  snapshots, beads, audit, vaults, documents, systemStatus, NOW,
 } from '../../app/src/data/mock.ts';
 import type { ActionEvent, ActionKind } from '../../app/src/domain/types.ts';
 
@@ -34,11 +34,37 @@ app.get('/api/world', (c) =>
   c.json({
     now: NOW,
     owners, sessions, agents, elements, actions,
-    config: configOptions, snapshots, beads, audit, vaults,
+    config: configOptions, snapshots, beads, audit, vaults, documents,
     system: systemStatus,
     timeWindow: [Math.min(...actions.map((a) => a.ts)), Math.max(...actions.map((a) => a.ts), NOW)],
   }),
 );
+
+// ── Documents ────────────────────────────────────────────────────────────────
+// List uploaded documents and accept new uploads. Upload records the document
+// and queues OCR; the route (local vs a cloud provider) comes from config, so
+// the per-feature privacy switch decides where the page image is processed.
+app.get('/api/documents', (c) => c.json(documents));
+
+app.post('/api/documents', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const name = typeof body.name === 'string' ? body.name : 'upload.bin';
+  const route = (configOptions.find((o) => o.key === 'ocr.route')?.value as string) ?? 'local';
+  // In this milestone the store is in-memory; a real deployment writes to the
+  // project's user-data plane and the OCR service processes asynchronously.
+  const doc = {
+    id: `doc-${documents.length + 1}`, name,
+    ownerId: (body.ownerId as string) ?? owners[0].id,
+    project: (body.project as string) ?? 'project-aurora',
+    sizeKb: Number(body.sizeKb) || 100, pages: Number(body.pages) || 1,
+    mime: (body.mime as string) ?? 'application/pdf',
+    uploadedAt: NOW, ocr: 'pending' as const,
+    ocrRoute: route as 'local' | 'openai' | 'mistral' | 'gemini' | 'anthropic',
+    handwriting: Boolean(body.handwriting),
+  };
+  documents.unshift(doc);
+  return c.json({ ok: true, document: doc });
+});
 
 app.get('/api/health', (c) => c.json({ status: 'ok', stack: systemStatus.activeStack, ts: NOW }));
 

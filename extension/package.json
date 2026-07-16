@@ -1,0 +1,84 @@
+{
+  "name": "docbox-companion",
+  "displayName": "docBox Companion",
+  "description": "The primary user's surface for docBox: an AI chat dock and a documents/OCR panel, docked in the code-server sidebar. The VS Code explorer is the file manager.",
+  "version": "0.1.0",
+  "publisher": "docbox",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.84.0"
+  },
+  "categories": [
+    "Other",
+    "AI",
+    "Chat"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onView:docbox.chat",
+    "onView:docbox.documents"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "docbox",
+          "title": "docBox",
+          "icon": "media/docbox.svg"
+        }
+      ]
+    },
+    "views": {
+      "docbox": [
+        {
+          "type": "webview",
+          "id": "docbox.chat",
+          "name": "Chat"
+        },
+        {
+          "type": "webview",
+          "id": "docbox.documents",
+          "name": "Documents"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "docbox.refreshDocuments",
+        "title": "docBox: Refresh Documents",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "docbox.refreshDocuments",
+          "when": "view == docbox.documents",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "docBox Companion",
+      "properties": {
+        "docbox.controlPlaneUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8787",
+          "description": "Base URL of the docBox control-plane server. The Chat view posts prompts to POST {url}/api/chat (relayed to the pi engine); the Documents view reads and writes {url}/api/documents. In the container the server sits behind oauth2-proxy, so this is usually a same-origin path."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc --noEmit",
+    "watch": "tsc --noEmit --watch",
+    "build": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --format=cjs --outfile=out/extension.js",
+    "vscode:prepublish": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.84.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.4.0"
+  }
+}

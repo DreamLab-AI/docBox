@@ -6,16 +6,18 @@ import OverviewTab from './features/overview/OverviewTab';
 import VisualiserTab from './features/visualiser/VisualiserTab';
 import ActivityTab from './features/activity/ActivityTab';
 import WorkTab from './features/work/WorkTab';
+import DocumentsTab from './features/documents/DocumentsTab';
 import ConfigTab from './features/config/ConfigTab';
 import OperationsTab from './features/operations/OperationsTab';
 
-type TabId = 'overview' | 'visualiser' | 'activity' | 'work' | 'config' | 'ops';
+type TabId = 'overview' | 'visualiser' | 'activity' | 'work' | 'documents' | 'config' | 'ops';
 
 const TABS: { id: TabId; label: string; hint: string; render: () => JSX.Element }[] = [
   { id: 'overview',   label: 'Overview',      hint: 'System at a glance',            render: () => <OverviewTab /> },
   { id: 'visualiser', label: 'Visualiser',    hint: 'Who did what, to what, when',   render: () => <VisualiserTab /> },
   { id: 'activity',   label: 'Activity',      hint: 'Action feed and agent tree',    render: () => <ActivityTab /> },
   { id: 'work',       label: 'Work',          hint: 'The agent work ledger',         render: () => <WorkTab /> },
+  { id: 'documents',  label: 'Documents',     hint: 'Uploads and OCR',               render: () => <DocumentsTab /> },
   { id: 'config',     label: 'Configuration', hint: 'Everything you can change',     render: () => <ConfigTab /> },
   { id: 'ops',        label: 'Operations',    hint: 'Snapshots, audit, vaults',      render: () => <OperationsTab /> },
 ];

@@ -11,6 +11,15 @@ recommendation: Qwen3-4B/8B (Apache-2.0) or Gemma 4 (now Apache-2.0!) on llama.c
 
 Licences verified via gh api + HuggingFace API license fields, 2026-07-16.
 
+## Framing: local is the private option, not the only one
+
+Cloud providers are available for every feature. The gateway routes each feature (agent text, OCR,
+future features) through its own switch whose `local` value is the private in-box model and whose
+other values are cloud providers, as peers. An operator picks the route per project against data
+sensitivity: `local` (gpt-oss for text, Qwen-VL for OCR) keeps a prompt in the box when the data
+requires it; a cloud route is chosen when accuracy or capability outweighs residency. Local is
+offered everywhere as the private option, never as a replacement for cloud.
+
 ## Headline: the Gemma licence trap has a version boundary
 
 | Gemma generation | Licence |

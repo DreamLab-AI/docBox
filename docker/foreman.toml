@@ -40,9 +40,36 @@ enabled = false           # apply-class: live
 default_route = "anthropic"   # apply-class: session  — one of: anthropic | openai | local
 
 [models.local]
-# Local model that runs with no provider key — keeps the box working offline and
-# cheap for background tasks. Changing which weights ship is a rebuild.
-name = "qwen3-8b"         # apply-class: rebuild  — one of: qwen3-4b | qwen3-8b | gemma-4-e4b
+# Local model that runs with no provider key, served inside the box. Keeps the
+# sandbox working offline and cheap for background tasks. Changing which weights
+# ship is a rebuild.
+#
+# gpt-oss-20b / gpt-oss-120b are OpenAI's open-weight models (Apache-2.0). They
+# are the private way to get OpenAI-quality reasoning: the weights run in the
+# box and no prompt reaches OpenAI's API. gpt-oss-20b fits ~16GB; gpt-oss-120b
+# wants an 80GB GPU. Both need a runtime that speaks the harmony format.
+name = "qwen3-8b"         # apply-class: rebuild  — one of: qwen3-4b | qwen3-8b | gemma-4-e4b | gpt-oss-20b | gpt-oss-120b
+
+# The server that runs the weights and exposes an OpenAI-compatible API in-box.
+runtime = "llama.cpp"     # apply-class: rebuild  — one of: llama.cpp | ollama | vllm
+
+# OpenAI-compatible base URL the gateway routes local calls to. gpt-oss reaches
+# the agent through the same OpenAI-compatible path as the cloud provider; only
+# the URL differs, and nothing leaves the box.
+endpoint = "http://local-model:11434/v1"   # apply-class: live
+
+[ocr]
+# Document OCR. Each AI feature carries its own local/cloud switch; this is the
+# document feature's. Cloud routes are more accurate on messy handwriting but
+# send the page image out; local keeps it in the box. Choose per the sensitivity
+# of the documents a client uploads.
+enabled = true            # apply-class: session
+route = "local"           # apply-class: session  — one of: local | openai | mistral | gemini
+local_model = "qwen2.5-vl-7b"   # apply-class: rebuild  — one of: qwen2.5-vl-7b | qwen3-vl | paddleocr-vl | deepseek-ocr
+endpoint = "http://local-ocr:11434/v1"   # apply-class: live  — used when route = local
+# No open model reads messy cursive reliably. Fields below the confidence
+# threshold go to a person; keep this on for handwriting.
+confidence_review = true  # apply-class: live
 
 # ===========================================================================
 # Toolchain bundles — the three TOML-gated Dockerfile bundles

@@ -3,7 +3,7 @@
 import type {
   Owner, SessionInfo, AgentInfo, ElementInfo, ActionEvent, ConfigOption,
   SnapshotInfo, BeadInfo, AuditRecord, VaultInfo, SystemStatus, ActionKind,
-  AgentKind, ElementKind,
+  AgentKind, ElementKind, DocumentInfo,
 } from '../domain/types';
 
 // Small seeded PRNG so every load renders the same world (replayable, like the real audit trail).
@@ -142,6 +142,16 @@ export const vaults: VaultInfo[] = [
   { id: 'v-cirrus', project: 'project-cirrus', state: 'locked', sizeMb: 96 },
 ];
 
+// Uploaded documents and their OCR state. ocrRoute records where OCR ran —
+// 'local' kept the page in the box, a cloud route sent it out.
+export const documents: DocumentInfo[] = [
+  { id: 'doc-1', name: 'intake-form-scanned.pdf', ownerId: owners[2].id, project: 'project-aurora', sizeKb: 2840, pages: 3, mime: 'application/pdf', uploadedAt: NOW - 55 * MIN, ocr: 'review', ocrRoute: 'local', handwriting: true, confidence: 0.61, fieldsForReview: 4 },
+  { id: 'doc-2', name: 'signed-contract.pdf', ownerId: owners[0].id, project: 'project-aurora', sizeKb: 910, pages: 12, mime: 'application/pdf', uploadedAt: NOW - 3 * HOUR, ocr: 'done', ocrRoute: 'local', handwriting: false, confidence: 0.98 },
+  { id: 'doc-3', name: 'handwritten-survey-batch.png', ownerId: owners[1].id, project: 'project-borealis', sizeKb: 5120, pages: 1, mime: 'image/png', uploadedAt: NOW - 20 * MIN, ocr: 'processing', ocrRoute: 'local', handwriting: true },
+  { id: 'doc-4', name: 'invoice-Q2.pdf', ownerId: owners[3].id, project: 'project-cirrus', sizeKb: 430, pages: 2, mime: 'application/pdf', uploadedAt: NOW - 8 * MIN, ocr: 'done', ocrRoute: 'mistral', handwriting: false, confidence: 0.99 },
+  { id: 'doc-5', name: 'field-notes-messy.jpg', ownerId: owners[2].id, project: 'project-aurora', sizeKb: 3300, pages: 1, mime: 'image/jpeg', uploadedAt: NOW - 2 * MIN, ocr: 'pending', ocrRoute: 'local', handwriting: true },
+];
+
 // Audit chain derived from the action stream (a subset gets recorded), plus lifecycle events.
 export const audit: AuditRecord[] = (() => {
   const recorded = actions.filter((_, i) => i % 3 === 0);
@@ -176,8 +186,16 @@ export const configOptions: ConfigOption[] = [
   { key: 'providers.openai.enabled', label: 'OpenAI', help: 'Route agent calls to OpenAI.', whenToUse: 'Alternative or fallback provider. Enable if a workload prefers it.', applyClass: 'live', type: 'boolean', value: true, group: 'Cloud providers', tab: 'providers' },
   { key: 'providers.deepseek.enabled', label: 'DeepSeek', help: 'Route to the DeepSeek hosted API.', whenToUse: 'Leave off for personal or regulated data: hosted in China, no UK/EU adequacy. Self-host the open weights instead.', applyClass: 'live', type: 'boolean', value: false, group: 'Cloud providers', tab: 'providers' },
   { key: 'providers.glm.enabled', label: 'GLM (Zhipu)', help: 'Route to the GLM hosted API.', whenToUse: 'Same residency caveat as DeepSeek. Dev and non-sensitive workloads only.', applyClass: 'live', type: 'boolean', value: false, group: 'Cloud providers', tab: 'providers' },
-  { key: 'models.local.name', label: 'Embedded model', help: 'Local model that runs with no provider key.', whenToUse: 'Keeps the sandbox working offline and for cheap background tasks. Rebuild to change which weights ship.', applyClass: 'rebuild', type: 'enum', value: 'qwen3-8b', options: ['qwen3-4b', 'qwen3-8b', 'gemma-4-e4b'], group: 'Local model', tab: 'providers' },
-  { key: 'models.default_route', label: 'Default route', help: 'Which model an agent uses when nothing is specified.', whenToUse: 'Point everyday work at the cheapest model that clears the bar; reserve the strong model for overhauls.', applyClass: 'session', type: 'enum', value: 'anthropic', options: ['anthropic', 'openai', 'local'], group: 'Routing', tab: 'providers' },
+  { key: 'models.local.name', label: 'Embedded model', help: 'Local model that runs with no provider key. Weights are baked in and served inside the box.', whenToUse: 'Keeps the sandbox working offline and cheap for background tasks. The two gpt-oss weights are OpenAI’s open models (Apache-2.0): pick them when a client wants OpenAI-quality reasoning but their data must never reach OpenAI’s API. gpt-oss-20b needs ~16GB; gpt-oss-120b wants an 80GB GPU. Changing which weights ship is a rebuild.', applyClass: 'rebuild', type: 'enum', value: 'qwen3-8b', options: ['qwen3-4b', 'qwen3-8b', 'gemma-4-e4b', 'gpt-oss-20b', 'gpt-oss-120b'], group: 'Local model', tab: 'providers' },
+  { key: 'models.local.runtime', label: 'Local runtime', help: 'The server that runs the embedded weights and exposes an OpenAI-compatible API inside the box.', whenToUse: 'llama.cpp is the lean CPU-first default. Use vLLM on a GPU host for gpt-oss-120b throughput. gpt-oss needs a runtime that speaks OpenAI’s harmony response format — all three listed do.', applyClass: 'rebuild', type: 'enum', value: 'llama.cpp', options: ['llama.cpp', 'ollama', 'vllm'], group: 'Local model', tab: 'providers' },
+  { key: 'models.local.endpoint', label: 'Local endpoint', help: 'OpenAI-compatible base URL the gateway routes local calls to.', whenToUse: 'Leave as the in-box service address unless you serve the model from another host. Because it is OpenAI-compatible, gpt-oss reaches the agent through the same code path as the cloud OpenAI provider — only the URL differs, and nothing leaves the box.', applyClass: 'live', type: 'string', value: 'http://local-model:11434/v1', group: 'Local model', tab: 'providers' },
+  { key: 'models.default_route', label: 'Agent route', help: 'Which model an agent uses when nothing is specified. This is the agent feature’s local/cloud switch.', whenToUse: 'Cloud providers give the strongest reasoning; local keeps a workload fully private on the embedded model. Point everyday work at the cheapest option that clears the bar; reserve the strong model for overhauls.', applyClass: 'session', type: 'enum', value: 'anthropic', options: ['anthropic', 'openai', 'local'], group: 'Routing', tab: 'providers' },
+
+  // ocr / documents — each AI feature carries its own local/cloud switch (route).
+  { key: 'ocr.enabled', label: 'Document OCR', help: 'Read uploaded documents into text the agent can use.', whenToUse: 'Enable when the team uploads scans or forms. Off if documents are always plain text.', applyClass: 'session', type: 'boolean', value: true, group: 'OCR', tab: 'providers' },
+  { key: 'ocr.route', label: 'OCR route', help: 'Where OCR runs. The document feature’s local/cloud switch.', whenToUse: 'local keeps sensitive forms in the box (a vision model runs in-network). Cloud routes are more accurate on messy handwriting but send the page image out — use them only where the document’s sensitivity allows.', applyClass: 'session', type: 'enum', value: 'local', options: ['local', 'openai', 'mistral', 'gemini'], group: 'OCR', tab: 'providers' },
+  { key: 'ocr.local_model', label: 'Local OCR model', help: 'Vision model used when the OCR route is local.', whenToUse: 'Qwen-VL is the best permissive single model for handwriting on forms. PaddleOCR-VL is lighter/faster for cleaner print. Both run behind the same OpenAI-compatible endpoint as the local text model.', applyClass: 'rebuild', type: 'enum', value: 'qwen2.5-vl-7b', options: ['qwen2.5-vl-7b', 'qwen3-vl', 'paddleocr-vl', 'deepseek-ocr'], group: 'OCR', tab: 'providers' },
+  { key: 'ocr.confidence_review', label: 'Low-confidence review', help: 'Route fields the model is unsure of to a human.', whenToUse: 'Keep on for handwriting. No open model reads messy cursive reliably; a person confirms the fields below the confidence threshold.', applyClass: 'live', type: 'boolean', value: true, group: 'OCR', tab: 'providers' },
 
   // toolchain
   { key: 'toolchain.ts_dashboard', label: 'TS dashboard tools', help: 'Biome, Vite, Vitest, Playwright in the image.', whenToUse: 'Enable when the team builds dashboards or web UIs in the sandbox.', applyClass: 'rebuild', type: 'boolean', value: true, group: 'Bundles', tab: 'toolchain' },

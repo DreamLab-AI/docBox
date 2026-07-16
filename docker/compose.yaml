@@ -151,6 +151,85 @@ services:
     depends_on: [audit-sidecar]
 
   # =========================================================================
+  # local-model — serves the embedded weights over an OpenAI-compatible API,
+  # entirely inside the box. This is the privacy path: an agent routed to the
+  # local endpoint (foreman.toml [models.local].endpoint) reaches OpenAI's
+  # gpt-oss weights (Apache-2.0) through the same OpenAI-compatible code path as
+  # the cloud provider, but no prompt ever leaves the host.
+  #
+  # The image shown is Ollama (serves gpt-oss and exposes /v1). Swap it for a
+  # vLLM or llama.cpp server image when foreman.toml [models.local].runtime says
+  # so — a rebuild-class change. gpt-oss-120b needs a GPU: uncomment the deploy
+  # reservation below and run the stack on a GPU host.
+  # Attached to agent-net ONLY; loopback-bound; no route to audit-net.
+  # =========================================================================
+  local-model:
+    <<: *hardening
+    image: ollama/ollama:0.13.0
+    env_file: [.env]
+    environment:
+      # e.g. gpt-oss-20b, gpt-oss-120b, qwen3-8b — pulled on first start.
+      LOCAL_MODEL: "${LOCAL_MODEL:-qwen3-8b}"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        until ollama list >/dev/null 2>&1; do sleep 1; done
+        ollama pull "${LOCAL_MODEL}" || echo "pull deferred; model name maps to a runtime tag"
+        wait
+    volumes:
+      - docbox-model-cache:/root/.ollama
+    ports:
+      # Loopback only; the agent reaches it in-network at http://local-model:11434.
+      - "127.0.0.1:${LOCAL_MODEL_PORT:-11434}:11434"
+    networks: [agent-net]
+    # gpt-oss-120b (and vLLM throughput) needs a GPU. Uncomment on a GPU host:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # =========================================================================
+  # local-ocr — the private OCR route. A vision model (Qwen-VL by default) reads
+  # uploaded documents in-box and returns text + per-field confidence. When
+  # foreman.toml [ocr].route is a cloud provider instead, this service is unused
+  # and the page image is sent out — that is the per-feature privacy switch.
+  # No open model reads messy handwriting reliably, so low-confidence fields are
+  # routed to human review (see [ocr].confidence_review). Same serving pattern
+  # as local-model; needs a GPU for the larger VLMs (uncomment the reservation).
+  # Attached to agent-net ONLY; loopback-bound.
+  # =========================================================================
+  local-ocr:
+    <<: *hardening
+    image: ollama/ollama:0.13.0
+    env_file: [.env]
+    environment:
+      OCR_MODEL: "${OCR_MODEL:-qwen2.5-vl}"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        until ollama list >/dev/null 2>&1; do sleep 1; done
+        ollama pull "${OCR_MODEL}" || echo "pull deferred; model name maps to a runtime tag"
+        wait
+    volumes:
+      - docbox-model-cache:/root/.ollama
+    ports:
+      - "127.0.0.1:${OCR_PORT:-11435}:11434"
+    networks: [agent-net]
+    profiles: ["ocr"]     # started only when the OCR feature is enabled
+    # deploy:              # uncomment on a GPU host for the larger vision models
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # =========================================================================
   # audit-sidecar — write-only, append-only, DUAL-HOMED. Ingest (POST /v1/events)
   # is served on agent-net; the audit volume and any read/query path live on
   # audit-net where no agent can reach. The append-only inode (chattr +a) on the
@@ -240,3 +319,4 @@ volumes:
   docbox-vaults:      # gocryptfs cipherdirs
   docbox-pnpm-store:  # shared pnpm content store (cache, not a plane)
   docbox-uv-store:    # shared uv package cache (cache, not a plane)
+  docbox-model-cache: # downloaded local-model weights (cache, not a plane)

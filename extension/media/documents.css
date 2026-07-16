@@ -1,0 +1,109 @@
+/* The Documents view. Same rule as the Chat view: theme variables only, so the
+   panel reads as a native part of code-server. */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  color: var(--vscode-foreground);
+  background: var(--vscode-sideBar-background);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+button {
+  padding: 4px 12px;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.status {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'name badge'
+    'meta meta';
+  gap: 2px 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.row:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.name {
+  grid-area: name;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.meta {
+  grid-area: meta;
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.85em;
+}
+
+.badge {
+  grid-area: badge;
+  align-self: start;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+/* OCR status colours reuse the theme's chart palette so they read without a
+   legend: green done, amber in-flight or needing review, red failed. */
+.badge.done {
+  background: var(--vscode-charts-green);
+  color: var(--vscode-editor-background);
+}
+
+.badge.processing,
+.badge.pending {
+  background: var(--vscode-charts-yellow);
+  color: var(--vscode-editor-background);
+}
+
+.badge.review {
+  background: var(--vscode-charts-orange);
+  color: var(--vscode-editor-background);
+}
+
+.badge.failed {
+  background: var(--vscode-charts-red);
+  color: var(--vscode-editor-background);
+}
