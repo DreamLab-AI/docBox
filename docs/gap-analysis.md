@@ -44,11 +44,11 @@ transfers, what's missing, and which round-2 researcher owns each gap.
 
 ## Gaps nobody is researching yet — parked, must reach the PRD
 
-1. **Shipping Claude Code itself.** The CLI is proprietary (Anthropic Commercial ToS). Embedding
-   it in a client-distributed container is a licensing/legal question, not a technical one —
-   likely fine when each user authenticates with their own Anthropic account, but *redistribution
-   of the binary* needs checking. Same question for any provider CLI we embed. **Legal check
-   before the brief response.**
+1. ~~**Shipping Claude Code itself.**~~ **RESOLVED 2026-07-16**: the product embeds **pi (MIT)**
+   as its agent engine instead of the proprietary Claude Code CLI (user decision; research in
+   `corpus/12-agent-harness/`). Model access via admin-provisioned **metered API keys** — never
+   a user's Claude subscription OAuth (the thing Anthropic actually enforced against in 2026).
+   Nothing proprietary ships.
 2. **Our own stack's licences.** ruflo/ruvector/claude-flow, the QE fleet, skills — audit what
    we can ship permissively before promising them in the container.
 3. **Secrets management.** Provider keys live where? (Gateway holds them; agents must never read
