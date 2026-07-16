@@ -65,6 +65,16 @@ A self-contained Docker (or similar) system:
 
 ## Non-negotiables (as currently understood)
 
+- **Not agentbox.** The product is a distillation: plain multi-stage Dockerfile, no Nix, no
+  five-slot adapter mesh, at most a handful of TOML-gated bundles. If a client needs
+  agentbox-grade machinery, they should be sold agentbox — this product stays simple.
+- **Maintainability outranks capability.** Fewest tools, one per job, mainstream choices,
+  libraries in project dependency files not the image, digest-pinned bases, small update
+  surface. (User steer 2026-07-16.)
+- The agent engine should be an extensible permissive harness (pi-class), not an embedded
+  proprietary CLI (user steer 2026-07-16; research in corpus/12-agent-harness/).
+- Toolchain requirement: TS dashboard build/test tools, multiple Python versions with venvs +
+  Jupyter, and the in-house LaTeX/report loadout — spec in corpus/13-toolchain/.
 - Permissive licences in everything shipped.
 - Primary users never see the machinery — one chat bubble, one URL.
 - Admin sees one control plane — provisioning, users, snapshots, rollback, unlock.
