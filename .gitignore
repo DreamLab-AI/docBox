@@ -1,0 +1,4 @@
+# Agent tooling state — not part of the research corpus
+.agentic-qe/
+.claude-flow/
+node_modules/
