@@ -203,7 +203,7 @@ function PendingDrawer({ pending, liveSessionCount, rebuildCount, onApplyLiveSes
   onReviewRebuild: () => void;
   onDiscard: () => void;
 }) {
-  const counts: Record<ApplyClass, number> = { live: 0, session: 0, rebuild: 0 };
+  const counts: Record<ApplyClass, number> = { hot: 0, live: 0, session: 0, rebuild: 0 };
   for (const p of pending) counts[p.applyClass] += 1;
 
   return (

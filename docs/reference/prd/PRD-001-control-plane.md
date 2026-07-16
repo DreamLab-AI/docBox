@@ -88,27 +88,43 @@ operator reviews before it runs.
 Snapshots and rollback, the audit trail, and vault lock state. Use it to recover from a bad
 overhaul, prove what changed and who asked, or unlock a project to work on it.
 
+### F7 — Documents
+Upload scans and forms for the agent to read, watch OCR progress, and confirm the handwriting
+fields the model was unsure of. Each document shows whether it stayed private (OCR ran in the box)
+or went to a cloud provider. Detail in PRD-007.
+
+### F8 — Self-modifying interface
+The interface edits itself under human guidance. A user asks in chat for a layout change; the
+agent applies it live through hot reload or the layout manifest, and sees the result via a
+screenshot. Panels are functionally isolated, so an agent edit that breaks one panel is contained,
+and interface state survives the reload. Architecture in ADR-008; the Interface configuration
+group carries the hot-class controls.
+
 ## Apply-class model (core requirement)
 
-Every configuration option is one of three classes. The UI must make the class obvious at the
+Every configuration option is one of four classes. The UI must make the class obvious at the
 point of change.
 
 | Class | Meaning | Example |
 |---|---|---|
+| **Hot** | Interface edit through hot reload or the layout manifest: sub-second, no rebuild | Panel layout, density, agent layout edits |
 | **Live** | Takes effect immediately on the running sandbox | Toggle a provider, edit the egress allowlist |
 | **Session** | Applies to sessions started after saving | Default model route, audit verbosity |
 | **Rebuild** | Writes TOML → builds image → blue/green swap with rollback | Toolchain bundles, embedded model, agent engine |
 
 Rebuilds are the only changes that can break the box, so they are the only changes routed through
-a reviewed plan and protected by auto-rollback.
+a reviewed plan and protected by auto-rollback. Hot changes cannot break the box or a panel: the
+layout is data and each panel is isolated by an error boundary.
 
 ## Success criteria
 
 - An operator can, from a cold open, tell within 10 seconds whether the box is healthy.
-- Every config control shows whether it is live, session, or rebuild, without a click.
+- Every config control shows its apply-class (hot, live, session, or rebuild) without a click.
 - The visualiser renders ~180 events smoothly and regroups without a reload.
 - The audit chain verifies in-browser and reports the last off-box anchor.
 - No feature reads mock data directly; all data flows through the adapter seam.
+- A full reload keeps the user on the same tab with their filters intact; a panel that faults is
+  contained and offers a reload without blanking the interface.
 
 ## Open questions (for the client brief)
 
@@ -119,4 +135,6 @@ a reviewed plan and protected by auto-rollback.
 ## Traceability
 
 Realised by: ADR-001 (stack), ADR-002 (apply-class), ADR-003 (visualiser rendering),
-DDD-001 (domain model). Feature sets F1–F6 map to `app/src/features/*`.
+ADR-007 (primary-user surface), ADR-008 (self-modifying interface), DDD-001 (domain model),
+DDD-003 (interface domain). Feature sets F1–F8 map to `app/src/features/*`; F7 is detailed in
+PRD-007, F8 in ADR-008.

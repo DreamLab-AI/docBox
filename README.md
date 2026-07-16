@@ -67,28 +67,34 @@ Each opens with plain guidance on when and why to use it.
 | **Visualiser** | Who did what, to what, when? | Trace an owner's blast radius, spot a rogue agent |
 | **Activity** | What is happening right now? | Follow a live session, audit one agent |
 | **Work** | What is the agent doing over the long run? | Track overhaul work, approve a gated overhaul |
-| **Configuration** | What can I change, and how does it land? | Provision a client, change providers, plan a rebuild |
+| **Documents** | What has been uploaded, and did it stay private? | Upload scans/forms, watch OCR, confirm handwriting, see local vs cloud routing |
+| **Configuration** | What can I change, and how does it land? | Provision a client, change providers, plan a rebuild, adjust the layout |
 | **Operations** | Can I undo this, and prove what changed? | Roll back, verify the audit chain, unlock a vault |
 
 ### The signature idea: apply-class
 
-Every configuration option is one of three classes, shown as a coloured badge at the point of
-change, so the operator always knows whether a toggle is instant or triggers a rebuild.
+Every configuration option is one of four classes, shown as a coloured badge at the point of
+change, so the operator always knows whether a change is instant, waits for a new session, or
+triggers a rebuild.
 
 ```mermaid
 flowchart LR
   change([Change a setting]) --> q{Apply-class}
+  q -->|hot| h["Interface edit\nvia hot reload / manifest\nsub-second"]
   q -->|live| l["Applies now\nto the running box"]
   q -->|session| s["Applies to\nnew sessions"]
   q -->|rebuild| r["Write TOML → build image\n→ healthcheck → blue/green\n→ auto-rollback on failure"]
+  style h fill:#221a33,stroke:#a06bff
   style l fill:#0e2b28,stroke:#33c2b4
   style s fill:#2b2410,stroke:#f0a53a
   style r fill:#2b1216,stroke:#f0596b
 ```
 
 Rebuild is the only class that can break the box, so it is the only one routed through a reviewed
-plan with a snapshot and auto-rollback. Rationale in
-[ADR-002](docs/reference/adr/ADR-002-apply-class-model.md).
+plan with a snapshot and auto-rollback. Hot is the interface editing itself: layout is data and
+each panel is isolated, so a hot edit cannot break the box or blank the interface. Rationale in
+[ADR-002](docs/reference/adr/ADR-002-apply-class-model.md) and
+[ADR-008](docs/reference/adr/ADR-008-live-self-modifying-interface.md).
 
 ## Repo map
 
@@ -102,11 +108,12 @@ docBox/
 │       ├── data/mock.ts       ← deterministic seeded world
 │       ├── data/live.ts       ← hydrate from the server + SSE subscription
 │       └── features/          ← one directory per tab
-├── server/                   ← control-plane server (Hono): /api/world, /api/config, /api/events
-├── docker/                   ← Dockerfile, compose, foreman.toml, .env.example, README
+├── server/                   ← control-plane server (Hono): /api/world, /api/config, /api/events, /api/documents
+├── extension/                ← code-server companion (VS Code sidebar): chat + documents dock (ADR-007)
+├── docker/                   ← Dockerfile, compose (+ local-model, local-ocr), foreman.toml, README
 ├── scripts/                  ← rebuild.sh (blue/green), rollback.sh, init-firewall.sh
 ├── docs/reference/           ← PRD / ADR / DDD
-├── corpus/                   ← licence-verified research (13 sections)
+├── corpus/                   ← licence-verified research
 └── .github/                  ← CI (typecheck, build, prose gate, secret scan)
 ```
 

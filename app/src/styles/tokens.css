@@ -25,6 +25,7 @@
   --green: #46c273;       /* ok, promoted */
 
   /* Apply-class semantic colours (the product's core distinction) */
+  --apply-hot: var(--violet);
   --apply-live: var(--teal);
   --apply-session: var(--amber);
   --apply-rebuild: var(--rose);
@@ -89,6 +90,7 @@ button { font-family: inherit; }
   font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0.02em;
   border: 1px solid var(--line-strong);
 }
+.badge-hot { color: var(--apply-hot); border-color: color-mix(in srgb, var(--apply-hot) 45%, transparent); background: color-mix(in srgb, var(--apply-hot) 12%, transparent); }
 .badge-live { color: var(--apply-live); border-color: color-mix(in srgb, var(--apply-live) 45%, transparent); background: color-mix(in srgb, var(--apply-live) 12%, transparent); }
 .badge-session { color: var(--apply-session); border-color: color-mix(in srgb, var(--apply-session) 45%, transparent); background: color-mix(in srgb, var(--apply-session) 12%, transparent); }
 .badge-rebuild { color: var(--apply-rebuild); border-color: color-mix(in srgb, var(--apply-rebuild) 45%, transparent); background: color-mix(in srgb, var(--apply-rebuild) 12%, transparent); }

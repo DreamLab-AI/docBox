@@ -24,7 +24,7 @@ export function Panel({ title, hint, right, children, style }: {
 
 /** The product's core signifier: how a change lands. Use next to any config control. */
 export function ApplyBadge({ cls, showHelp }: { cls: ApplyClass; showHelp?: boolean }) {
-  const map: Record<ApplyClass, string> = { live: 'badge-live', session: 'badge-session', rebuild: 'badge-rebuild' };
+  const map: Record<ApplyClass, string> = { hot: 'badge-hot', live: 'badge-live', session: 'badge-session', rebuild: 'badge-rebuild' };
   return (
     <span className={`badge ${map[cls]}`} title={applyClassHelp[cls]}>
       {applyClassLabel[cls]}

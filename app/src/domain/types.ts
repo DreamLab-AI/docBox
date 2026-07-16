@@ -4,6 +4,7 @@
 
 /** How a configuration change takes effect. This is the product's core semantic. */
 export type ApplyClass =
+  | 'hot'      // interface edit via HMR or the layout manifest: sub-second, no rebuild (ADR-008)
   | 'live'     // applies immediately to the running sandbox
   | 'session'  // applies to sessions started after the change
   | 'rebuild'; // changes the system definition: TOML commit -> image rebuild -> blue/green swap
@@ -94,7 +95,8 @@ export type ConfigTabId =
   | 'vaults'
   | 'audit'
   | 'snapshots'
-  | 'agents';
+  | 'agents'
+  | 'interface';
 
 export interface PendingChange {
   key: string;

@@ -82,12 +82,14 @@ export const store = {
 };
 
 export const applyClassLabel: Record<ApplyClass, string> = {
+  hot: 'Hot',
   live: 'Live',
   session: 'Next session',
   rebuild: 'Rebuild',
 };
 
 export const applyClassHelp: Record<ApplyClass, string> = {
+  hot: 'Interface edit through hot reload or the layout manifest. Sub-second, no rebuild.',
   live: 'Takes effect immediately on the running sandbox.',
   session: 'Applies to sessions started after you save.',
   rebuild: 'Writes the TOML, rebuilds the image, and swaps stacks with rollback.',

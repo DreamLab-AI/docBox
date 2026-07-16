@@ -71,7 +71,7 @@ export function groupByHeading(options: ConfigOption[], tab: ConfigTabId): [stri
 }
 
 export const TAB_ORDER: ConfigTabId[] = [
-  'providers', 'toolchain', 'identity', 'network', 'vaults', 'audit', 'snapshots', 'agents',
+  'providers', 'toolchain', 'identity', 'network', 'vaults', 'audit', 'snapshots', 'agents', 'interface',
 ];
 
 export const TAB_LABEL: Record<ConfigTabId, string> = {
@@ -83,6 +83,7 @@ export const TAB_LABEL: Record<ConfigTabId, string> = {
   audit: 'Audit',
   snapshots: 'Snapshots',
   agents: 'Agents',
+  interface: 'Interface',
 };
 
 export const APPLY_ORDER: ApplyClass[] = ['live', 'session', 'rebuild'];

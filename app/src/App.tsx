@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { store, applyClassHelp } from './data/adapter';
 import { IS_LIVE, subscribeActions } from './data/live';
 import { OwnerTag, StatusPip, fmtAgo } from './ui/primitives';
+import { PanelBoundary } from './ui/PanelBoundary';
+import { useUiState } from './ui/uiState';
 import OverviewTab from './features/overview/OverviewTab';
 import VisualiserTab from './features/visualiser/VisualiserTab';
 import ActivityTab from './features/activity/ActivityTab';
@@ -23,13 +25,15 @@ const TABS: { id: TabId; label: string; hint: string; render: () => JSX.Element 
 ];
 
 export function App() {
-  const [tab, setTab] = useState<TabId>('overview');
+  // Active tab persists across HMR and reloads (ADR-008): an agent editing a
+  // live panel, or a hot reload, never bumps the user off what they were viewing.
+  const [tab, setTab] = useUiState<TabId>('activeTab', 'overview');
   // In live mode, new actions arriving over SSE bump this counter, which
   // re-renders the active tab so it re-reads the store and shows the arrival.
   const [, setLiveTick] = useState(0);
   useEffect(() => subscribeActions(() => setLiveTick((n) => n + 1)), []);
   const sys = store.system();
-  const active = TABS.find((t) => t.id === tab)!;
+  const active = TABS.find((t) => t.id === tab) ?? TABS[0];
 
   return (
     <div style={{ display: 'grid', gridTemplateRows: 'auto auto 1fr', height: '100%' }}>
@@ -57,7 +61,9 @@ export function App() {
             <h2 style={{ margin: 0, fontSize: 'var(--fs-2xl)', fontWeight: 680, letterSpacing: '-0.01em' }}>{active.label}</h2>
             <p className="muted" style={{ margin: '2px 0 0' }}>{active.hint}</p>
           </div>
-          {active.render()}
+          {/* Each panel is functionally isolated: a fault here is contained to
+              this panel and never blanks the interface (ADR-008). */}
+          <PanelBoundary name={active.label}>{active.render()}</PanelBoundary>
         </div>
       </main>
     </div>
