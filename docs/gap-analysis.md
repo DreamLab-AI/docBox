@@ -1,5 +1,12 @@
 # Gap Analysis — Round-1 Corpus vs the Product Vision
 
+> **Round-2 outcome (2026-07-16):** all 13 assigned gaps below were researched and delivered —
+> findings live in `corpus/05`–`corpus/11` and the consolidated README. The "parked" list
+> below remains open for the PRD, now extended by the r6 forgotten-requirements sweep
+> (see `corpus/11-ecosystem/prior-art-whole-vision.md`): product update channel, control-plane
+> backup/DR, LLM cost governance, human approval gate for self-modifications, and SBOM/licence
+> hygiene for agent-introduced dependencies are the five most load-bearing additions.
+
 Round 1 (corpus/, 2026-07-16) surveyed "container + web UI for a coding agent". The vision in
 [`vision-brief.md`](vision-brief.md) is a *product* wrapping that pattern. This maps what
 transfers, what's missing, and which round-2 researcher owns each gap.

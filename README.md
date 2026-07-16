@@ -1,91 +1,88 @@
-# Single-Purpose Agent Container — Research Corpus
+# Client Dev Sandbox — Research Corpus
 
-Research corpus for a client project exploring the **Claude Code on the web / Claude Cowork model**:
-a self-contained Docker-style container running a coding agent, exposed through a single-purpose
-web interface. This repo collects the candidate architectures, projects, and infrastructure options
-with verified licence and health data.
+Research corpus for a client project: a **self-contained Docker dev sandbox with an embedded
+agentic intelligence layer** — admin web control plane, Entra SSO, web VS Code, embedded +
+provisioned LLMs, hierarchical audit trail, snapshot/rollback of agent-driven overhauls,
+per-project encrypted vaults, zero-inbound-port exposure. Feeds the upcoming PRD/ADR/DDD work
+(client brief expected ~late July 2026).
 
-**Hard constraint: permissive licences only (MIT / Apache-2.0 / BSD). This is client work — no
-AGPL, no GPL, no unlicensed code in the shipped product.**
+**Hard constraint: permissive licences only (MIT / Apache-2.0 / BSD) in anything shipped.**
+Every licence claim in this corpus was verified against the GitHub API or a raw LICENSE read on
+**2026-07-16** — several popular projects' badges lie (details per file).
 
-All GitHub metadata (licence, stars, last push, archived status) verified **2026-07-16** via the
-GitHub API. Machine-readable dataset: [`data/options.json`](data/options.json).
-
-## The target model (what we are emulating)
-
-Anthropic's own products define the pattern:
-
-- **Claude Code on the web** — each session runs in an isolated per-session VM on Anthropic infra,
-  with network egress proxied through an allowlist and scoped credential injection.
-- **Claude Cowork (local)** — a full Linux VM on the desktop (Apple Virtualization.framework /
-  Hyper-V), and *inside* that VM the agent still runs under bubblewrap + seccomp, a VirtioFS
-  folder whitelist, and an egress proxy. Defence in depth: VM → process sandbox → FS whitelist → network allowlist.
-
-See [`corpus/01-anthropic-native/`](corpus/01-anthropic-native/) for the full breakdown.
+- Vision: [`docs/vision-brief.md`](docs/vision-brief.md)
+- Gaps & coverage: [`docs/gap-analysis.md`](docs/gap-analysis.md)
+- Questions for the client: [`docs/client-questions.md`](docs/client-questions.md)
+- Machine-readable round-1 dataset: [`data/options.json`](data/options.json)
 
 ## Corpus layout
 
-| Directory | Contents |
-|---|---|
-| [`corpus/01-anthropic-native/`](corpus/01-anthropic-native/) | Anthropic's own architecture, sandbox-runtime (srt), official devcontainer pattern |
-| [`corpus/02-claude-code-web-uis/`](corpus/02-claude-code-web-uis/) | Self-hosted web front-ends that wrap the real Claude Code CLI in a container |
-| [`corpus/03-agent-platforms/`](corpus/03-agent-platforms/) | Full agent platforms and multi-agent orchestration UIs |
-| [`corpus/04-sandbox-infra/`](corpus/04-sandbox-infra/) | Isolation/sandbox infrastructure (microVMs, container sandboxes, managed services) |
+| Directory | Contents | Round |
+|---|---|---|
+| `corpus/01-anthropic-native/` | Claude Code web / Cowork reference architecture, srt sandbox runtime, official devcontainer pattern | 1 |
+| `corpus/02-claude-code-web-uis/` | HolyClaude, CloudCLI (AGPL flag), happy, agentapi, archived options | 1 |
+| `corpus/03-agent-platforms/` | OpenHands, vibe-kanban, crystal, Sculptor | 1 |
+| `corpus/04-sandbox-infra/` | E2B, Daytona (no licence!), microsandbox, Cloudflare sandbox-sdk, managed services | 1 |
+| `corpus/05-identity-and-access/` | Entra SSO architecture, per-project encrypted vaults | 2 |
+| `corpus/06-network-exposure/` | Zero-inbound tunnels + Entra, 3-posture matrix | 2 |
+| `corpus/07-models-and-gateways/` | Embedded local models (Gemma 4!), provider gateways | 2 |
+| `corpus/08-distribution/` | Desktop launcher, Docker Desktop trap, server-vs-local | 2 |
+| `corpus/09-observability-audit/` | Audit/identity architecture (specialist), observability tooling | 2 |
+| `corpus/10-architecture/` | Snapshot/rollback architecture (specialist) | 2 |
+| `corpus/11-ecosystem/` | Nostr/Solid/chat-widgets, prior-art sweep, TypeScript stack | 2 |
 
-## Decision matrix (verified 2026-07-16)
+## Headline findings
 
-### ✅ Permissive — usable for client work
+1. **The combination is whitespace.** No surveyed product does all six pillars; nothing at all
+   does "agent overhauls its own platform tooling with snapshot+rollback". Closest three:
+   Coder (AGPL — reference only), OpenHands (MIT), AnythingLLM (MIT). No single Microsoft SKU
+   competes — their stack is cloud/subscription-bound at every layer, so a self-contained
+   client-owned box is a defensible differentiator.
+2. **Licence badges lie.** Verified-by-reading-LICENSE traps found: Open WebUI (custom
+   branding-restricted licence), immudb (BSL 1.1, not Apache), Redis ≥8 (RSAL/SSPL/AGPL —
+   use Valkey), Daytona (no LICENSE file at all), NLUX (modified MPL), Typebot (FSL),
+   Pangolin (AGPL/commercial), NetBird control plane (AGPL), HashiCorp Vault (BUSL → OpenBao),
+   AutoGPT platform dir (Polyform Shield), asciinema CLI (GPL-3) vs its player (Apache-2.0),
+   util-linux `script.c` (BSD-3) vs `scriptreplay.c` (GPL-2+).
+3. **Two assumptions died in research.** Gemma is no longer categorically encumbered — Gemma 4
+   (Apr 2026) is Apache-2.0; the Terms-of-Use trap only applies ≤3n. And TS7 went GA
+   2026-07-08 but has no stable programmatic API until 7.1 — build on tsc 5/6, run `tsgo` in CI.
 
-| Project | Licence | Stars | Last push | What it is |
-|---|---|---|---|---|
-| [OpenHands](corpus/03-agent-platforms/openhands.md) | MIT (excl. `enterprise/`) | 81,010 | 2026-07-16 | Full agent platform: Docker sandbox runtime + web GUI + SDK |
-| [code-server](corpus/02-claude-code-web-uis/agentapi.md) | MIT | 78,425 | 2026-07-16 | VS Code in the browser (general-purpose, not agent-specific) |
-| [vibe-kanban](corpus/03-agent-platforms/vibe-kanban.md) | Apache-2.0 | 27,403 | 2026-04-24 | Kanban web UI orchestrating Claude Code/Codex/Gemini agents |
-| [happy](corpus/02-claude-code-web-uis/happy.md) | MIT | 22,667 | 2026-07-11 | Self-hostable web+mobile client for Claude Code, E2E encrypted |
-| [E2B](corpus/04-sandbox-infra/e2b.md) | Apache-2.0 | 13,006 | 2026-07-16 | Firecracker microVM sandboxes for agents (hosted + self-host) |
-| [microsandbox](corpus/04-sandbox-infra/microsandbox.md) | Apache-2.0 | 6,951 | 2026-07-16 | Self-hosted libkrun microVM sandboxes |
-| [sandbox-runtime (srt)](corpus/01-anthropic-native/sandbox-runtime-srt.md) | Apache-2.0 | 4,681 | 2026-07-16 | Anthropic's official OS-level sandbox (bubblewrap/Seatbelt) |
-| [crystal](corpus/03-agent-platforms/crystal.md) | MIT | 3,099 | 2026-02-26 | Desktop multi-session Claude Code manager (worktrees) |
-| [agentapi](corpus/02-claude-code-web-uis/agentapi.md) | MIT | 1,455 | 2026-05-27 | HTTP API wrapper around Claude Code/Goose/Aider — UI building block |
-| [cloudflare/sandbox-sdk](corpus/04-sandbox-infra/cloudflare-sandbox-sdk.md) | Apache-2.0 | 1,071 | 2026-07-16 | SDK for Cloudflare Containers agent sandboxes (service is cloud-only) |
-| [OpenHands agent SDK](corpus/03-agent-platforms/openhands.md) | MIT | 903 | 2026-07-16 | Composable SDK: DockerWorkspace, browser VS Code/VNC, ACP |
+## Emerging reference architecture (hypothesis for the PRD — not yet decided)
 
-### ⚠️ Flagged — licence or health problems
+| Layer | Choice | Source |
+|---|---|---|
+| Config | agentbox.toml adapter-slot pattern · smol-toml + c12 + zod v4 · first-boot wizard writes TOML (Coolify pattern, Portainer time-boxed admin claim) | in-house · 11 · r6 |
+| Identity | Entra App Roles → oauth2-proxy (`ms_entra_id`) → Traefik/Caddy forward-auth; internal gateway-signed JWT; `entra:{tid}:{oid}` as the immutable seed | 05 · 09 |
+| Core stack | Node 24 LTS control plane on Hono (+`hc` typed client) · Bun for agent supervision + single-binary sidecars · tsc 5/6 now, TS7 at 7.1 | 11 |
+| Surfaces | code-server behind the proxy · LibreChat (MIT) or bespoke chat UI · **deep-chat** (MIT) script-tag bubble in the client dashboard → agentapi/Hono SSE backend | 02 · 05 · 11 |
+| Models | Vercel AI SDK (Apache-2.0) in-process, provisioned from TOML+dotenv · embedded Qwen3-4B/8B or Gemma-4-E4B on llama.cpp / Docker Model Runner (8 vCPU/16GB) | 07 · 11 |
+| Agent layer | claude-flow/ruflo orchestrator + Claude Code under **srt** inside the hardened container (devcontainer egress-firewall pattern) | 01 |
+| Snapshots | "Three planes, one supervisor": git+local registry (system), restic (user data), WORM (audit) · blue/green cutover with data-compat probe · supervisor in a recovery partition outside the agent's reach | 10 |
+| Audit | Claude Code hooks → WAL spool → **topologically write-only sidecar** (two networks) · hash-chained JSONL + hourly Ed25519 anchors off-box · OTel (traces beta) → collector → ClickHouse · Helicone/OpenLIT UI · `script --log-io` + chrome-devtools screencast + rrweb | 09 |
+| Vaults | gocryptfs (MIT) cipherdirs · v1 decrypt-on-unlock (zero privileges) · DEKs wrapped in client's Azure Key Vault, released on Entra session | 05 |
+| Network | Loopback-only host binding + cloudflared + **Cloudflare Access→Entra** (posture a) · Entra Private Access if Microsoft-mandated (b) · OpenZiti self-host (c) | 06 |
+| Distribution | Likely server-hosted + thin URL shell/PWA (kills Docker Desktop licensing + WSL2/GPO friction structurally); Electron-over-Podman/Rancher only if offline/local is required | 08 |
 
-| Project | Problem |
-|---|---|
-| [claudecodeui / CloudCLI](corpus/02-claude-code-web-uis/claudecodeui-cloudcli.md) (12,674★) | **AGPL-3.0** — excluded for client work |
-| [HolyClaude](corpus/02-claude-code-web-uis/holyclaude.md) (2,431★) | Repo is MIT but **bundles AGPL CloudCLI as its web UI** — contaminated for our purposes |
-| [Daytona](corpus/04-sandbox-infra/daytona.md) (72,274★) | **No LICENSE file in repo** as of 2026-07-16 (historically AGPL-3.0) — treat as all-rights-reserved |
-| opcode, ex-Claudia (22,179★) | AGPL-3.0, stale (last push 2025-10) |
-| claude-squad (8,132★) | AGPL-3.0 (terminal-based anyway) |
-| [sugyan/claude-code-webui](corpus/02-claude-code-web-uis/claude-code-webui-sugyan.md) (1,142★) | MIT but **archived** 2026-05 |
-| textcortex/claude-code-sandbox (320★) | No licence + archived |
-| omnara (2,650★) | Apache-2.0 but **archived** 2026-01 |
-| anthropics/claude-code `.devcontainer` | Repo is proprietary (Anthropic commercial ToS) — the *pattern* is reimplementable, the files are not copy-paste |
+**Cross-stream conflict resolutions**: LiteLLM (r2) superseded by Vercel AI SDK (r9) for the
+TS-first constraint — both permissive, language/ops call. immudb corrected from Apache-2.0 (s2)
+to BSL 1.1 (r5, LICENSE read). Nostr for internal audit mirroring: r4's honest answer is
+"protocol enthusiasm — use an internal bus" *unless* the client wants user-sovereign data
+portability; r5's anchoring of audit head-hashes to our existing relay is the one lightweight
+legitimate use either way.
 
-### Proprietary references (architecture study only)
+## Round-1 quick matrix (original single-purpose-container survey)
 
-- **Claude Code on the web / Cowork** — the model itself; see corpus 01.
-- **Sculptor (Imbue)** — per-agent Docker containers from devcontainer specs, cached images, Pairing Mode; see corpus 03.
-- **Fly.io Sprites, Modal Sandboxes, Cloudflare Containers (service), Anthropic Managed Agents** — managed execution substrates; see corpus 04.
+✅ Permissive & healthy: OpenHands (MIT, 81k★) · code-server (MIT, 78k★) · vibe-kanban
+(Apache-2.0) · happy (MIT) · E2B (Apache-2.0) · microsandbox (Apache-2.0) · srt (Apache-2.0) ·
+agentapi (MIT) · cloudflare/sandbox-sdk (Apache-2.0).
+⚠️ Flagged: claudecodeui/CloudCLI (AGPL) · HolyClaude (MIT shell over AGPL UI) · Daytona (no
+licence) · opcode/claude-squad (AGPL) · sugyan webui + omnara + textcortex (archived) ·
+anthropics/claude-code `.devcontainer` (proprietary files, reimplementable pattern).
 
-## Emerging synthesis (working hypothesis, not yet decided)
+## Conventions
 
-The permissive-licence build path that matches the Cowork model:
-
-1. **Container**: reimplement the official devcontainer pattern — pinned base image, agent user,
-   network egress firewall with allowlist (the load-bearing security control).
-2. **Inner sandbox**: run Claude Code under `@anthropic-ai/sandbox-runtime` (Apache-2.0) inside the
-   container — defence in depth exactly as Cowork does (container ≈ VM layer, srt ≈ bwrap layer).
-3. **Web interface**: either build thin on **agentapi** (MIT, HTTP/SSE API over Claude Code),
-   adopt **happy** (MIT, mature web+mobile client), or adopt the **OpenHands** GUI/SDK (MIT) if the
-   client wants multi-agent/platform scope.
-4. **Scale-out later**: per-session microVMs via **E2B** (Apache-2.0) or **microsandbox**
-   (Apache-2.0) if multi-tenant isolation becomes a requirement.
-
-## Corpus conventions
-
-Every corpus file carries YAML frontmatter: `name`, `category`, `url`, `license`,
-`license_ok_for_client`, `stars`, `last_push`, `status`, `verified` (date the data was checked).
-Update `verified` when refreshing. Add new options as new files; keep one option per file.
+One option per file; YAML frontmatter with `verified:` date — update when refreshing. Round-2
+files carry `researcher:` provenance (nine Sonnet researchers + two Opus specialists,
+fan-out/fan-in 2026-07-16). Add new findings as new files; corrections edit the original file
+with a note citing the correcting stream.

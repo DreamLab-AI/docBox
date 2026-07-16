@@ -56,9 +56,10 @@ a property of the wiring, not a promise in the handler.
 - **Hourly Ed25519-signed Merkle-root anchors shipped off-box** (client SIEM and/or our existing
   relay egress) — retroactive edits break the chain AND fail the external anchor, so even
   volume-write admins can't tamper undetectably.
-- grep/jq-able; `audit-verify` CLI recomputes the chain. immudb (Apache-2.0) is the v2 upgrade;
-  ClickHouse (Apache-2.0) acceptable for query scale; **Loki (AGPL) and Elasticsearch (SSPL)
-  fail the licence bar**.
+- grep/jq-able; `audit-verify` CLI recomputes the chain. **Correction from the r5 stream:
+  immudb is BSL 1.1 since late 2023, NOT Apache-2.0** — the v2 upgrade path is ClickHouse
+  (Apache-2.0) for query scale, or immudb only with legal sign-off on BSL internal use;
+  **Loki (AGPL) and Elasticsearch (SSPL) fail the licence bar**.
 - SIEM: CEF over syslog RFC 5424/TLS (safest common denominator); signed bulk export
   (segments + Merkle manifest) lets the client verify independently.
 
