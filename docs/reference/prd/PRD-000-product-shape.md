@@ -29,17 +29,24 @@ flowchart LR
   M4 --> M5[M5 Identity + tunnels\nEntra + Cloudflare]
   M5 --> M6[M6 Audit + vaults\nwrite-only + gocryptfs]
   M6 --> M7[M7 Chat bubble\nembed in client dashboard]
+  classDef done fill:#0e2b28,stroke:#33c2b4;
+  classDef active fill:#2b2410,stroke:#f0a53a;
+  class M1 done;
+  class M2 active;
 ```
 
-| Milestone | Delivers | Corpus basis |
-|---|---|---|
-| **M1** (now) | Foreman UI, mock-backed, judged before containerising | PRD-001, ADR-001/002/003 |
-| M2 | Hono control-plane server; adapter swaps mock for HTTP/SSE | corpus/11 typescript-stack |
-| M3 | pi embedded via RPC/SDK; audit + identity injection through its hooks | corpus/12 permissive-harnesses |
-| M4 | Multi-stage Dockerfile; three-planes snapshot/rollback; blue/green | corpus/10, corpus/13 |
-| M5 | Entra SSO via oauth2-proxy; cloudflared + Access; loopback-only | corpus/05, corpus/06 |
-| M6 | Write-only audit sidecar; hash chain + anchors; gocryptfs vaults | corpus/09, corpus/05 |
-| M7 | deep-chat bubble in the client dashboard → pi over the control plane | corpus/11 |
+Status legend: **Done** shipped and judged · **In progress** being specified or built now ·
+**Planned** scoped, not yet started.
+
+| Milestone | Delivers | Status | Basis |
+|---|---|---|---|
+| **M1** | Foreman UI, mock-backed, judged before containerising | Done | PRD-001, ADR-001/002/003 |
+| **M2** | Hono control-plane server; adapter swaps mock for HTTP/SSE | In progress | PRD-002, ADR-004/005, corpus/11 |
+| **M3** | pi embedded via RPC/SDK; audit + identity injection through its hooks | Planned | PRD-003, corpus/12 |
+| **M4** | Multi-stage Dockerfile; three-planes snapshot/rollback; blue/green | Planned | PRD-004, ADR-006, DDD-002, corpus/10, corpus/13 |
+| **M5** | Entra SSO via oauth2-proxy; cloudflared + Access; loopback-only | Planned | PRD-005, corpus/05, corpus/06 |
+| **M6** | Write-only audit sidecar; hash chain + anchors; gocryptfs vaults | Planned | PRD-006, corpus/09, corpus/05 |
+| **M7** | deep-chat bubble in the client dashboard → pi over the control plane | Planned | corpus/11 |
 
 ## Feature areas and their homes
 

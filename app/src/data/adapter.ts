@@ -1,36 +1,79 @@
 // The seam. Feature modules import ONLY from here, never from mock.ts directly.
-// Swapping mock for a real HTTP/SSE client later means rewriting this file alone.
-import {
-  owners, sessions, agents, elements, actions, configOptions,
-  snapshots, beads, audit, vaults, systemStatus, NOW,
-} from './mock';
+// The accessor API is synchronous and frozen. Data lives in a swappable `world`
+// object: it starts as the deterministic mock and, in live mode, is replaced by
+// a snapshot fetched from the control-plane server at boot (see live.ts and
+// main.tsx). Swapping mock for a real backend is this file plus live.ts, nothing
+// in the feature modules — the promise ADR-001 makes.
+import * as mock from './mock';
 import type {
   Owner, SessionInfo, AgentInfo, ElementInfo, ActionEvent, ConfigOption,
   SnapshotInfo, BeadInfo, AuditRecord, VaultInfo, SystemStatus, ApplyClass,
 } from '../domain/types';
 
+export interface World {
+  now: number;
+  owners: Owner[];
+  sessions: SessionInfo[];
+  agents: AgentInfo[];
+  elements: ElementInfo[];
+  actions: ActionEvent[];
+  config: ConfigOption[];
+  snapshots: SnapshotInfo[];
+  beads: BeadInfo[];
+  audit: AuditRecord[];
+  vaults: VaultInfo[];
+  system: SystemStatus;
+}
+
+const mockWorld: World = {
+  now: mock.NOW,
+  owners: mock.owners,
+  sessions: mock.sessions,
+  agents: mock.agents,
+  elements: mock.elements,
+  actions: mock.actions,
+  config: mock.configOptions,
+  snapshots: mock.snapshots,
+  beads: mock.beads,
+  audit: mock.audit,
+  vaults: mock.vaults,
+  system: mock.systemStatus,
+};
+
+// Mutable current world. Defaults to mock so the app always renders offline.
+let world: World = mockWorld;
+
+/** Replace the world (called by live.ts after fetching from the server). */
+export function hydrate(next: World): void {
+  world = next;
+}
+
+/** Append a live action (from the SSE stream). Keeps the array time-sorted. */
+export function pushAction(a: ActionEvent): void {
+  world.actions = [...world.actions, a].sort((x, y) => x.ts - y.ts);
+}
+
 export const store = {
-  now: (): number => NOW,
-  owners: (): Owner[] => owners,
-  sessions: (): SessionInfo[] => sessions,
-  agents: (): AgentInfo[] => agents,
-  elements: (): ElementInfo[] => elements,
-  actions: (): ActionEvent[] => actions,
-  config: (): ConfigOption[] => configOptions,
-  snapshots: (): SnapshotInfo[] => snapshots,
-  beads: (): BeadInfo[] => beads,
-  audit: (): AuditRecord[] => audit,
-  vaults: (): VaultInfo[] => vaults,
-  system: (): SystemStatus => systemStatus,
+  now: (): number => world.now,
+  owners: (): Owner[] => world.owners,
+  sessions: (): SessionInfo[] => world.sessions,
+  agents: (): AgentInfo[] => world.agents,
+  elements: (): ElementInfo[] => world.elements,
+  actions: (): ActionEvent[] => world.actions,
+  config: (): ConfigOption[] => world.config,
+  snapshots: (): SnapshotInfo[] => world.snapshots,
+  beads: (): BeadInfo[] => world.beads,
+  audit: (): AuditRecord[] => world.audit,
+  vaults: (): VaultInfo[] => world.vaults,
+  system: (): SystemStatus => world.system,
 
-  ownerById: (id: string): Owner | undefined => owners.find((o) => o.id === id),
-  agentById: (id: string): AgentInfo | undefined => agents.find((a) => a.id === id),
-  elementById: (id: string): ElementInfo | undefined => elements.find((e) => e.id === id),
+  ownerById: (id: string): Owner | undefined => world.owners.find((o) => o.id === id),
+  agentById: (id: string): AgentInfo | undefined => world.agents.find((a) => a.id === id),
+  elementById: (id: string): ElementInfo | undefined => world.elements.find((e) => e.id === id),
 
-  // Window covering all activity, for the timeline scale.
   timeWindow: (): [number, number] => {
-    const ts = actions.map((a) => a.ts);
-    return [Math.min(...ts), Math.max(...ts, NOW)];
+    const ts = world.actions.map((a) => a.ts);
+    return [Math.min(...ts), Math.max(...ts, world.now)];
   },
 };
 

@@ -1,0 +1,88 @@
+# CI for docBox — a public repo.
+#
+# There is deliberately NO docker-build job here. This repo's images build only on a real host:
+# Docker-in-Docker with bind-mounted source resolves paths against the host filesystem, not the
+# runner's, so an image built inside CI would bake in stale or empty source rather than the checked
+# -out tree. Image builds happen on the host build path, never in Actions. See docker/ for how.
+#
+# Action versions are pinned to explicit release tags.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: jobs only need to read the checked-out tree.
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Typecheck and build (app)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6.0.9
+        with:
+          version: 10
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Build
+        run: pnpm run build
+
+  docs-prose:
+    name: Docs prose scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - name: Scan docs and README for banned marketing words
+        run: |
+          set -uo pipefail
+          banned='seamless|leverage|robust|comprehensive|streamline'
+          echo "Scanning docs/ and README.md for: ${banned//|/, }"
+          if grep -rniE "\b(${banned})\b" docs README.md; then
+            echo "::error::Banned marketing word found above. Rewrite in plain UK English (see CONTRIBUTING.md, rule 2)."
+            exit 1
+          fi
+          echo "Prose scan clean: no banned words."
+
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+        with:
+          # Full history so gitleaks scans every commit, not just the tip.
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

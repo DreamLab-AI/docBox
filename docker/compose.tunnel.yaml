@@ -1,0 +1,37 @@
+# docBox tunnel overlay — OPTIONAL egress-only ingress (corpus/06-network-exposure).
+#
+# Cloudflare Tunnel gives the box zero inbound ports: cloudflared dials OUT to
+# Cloudflare's edge and Cloudflare Access does Entra OIDC at the edge, so the
+# origin never sees unauthenticated traffic. cloudflared is Apache-2.0, free and
+# unmetered. Kept as an overlay so the base stack runs tunnel-free on a host that
+# reaches Foreman over the loopback ports directly.
+#
+# Merge it on top of the base stack:
+#   docker compose -f compose.yaml -f compose.tunnel.yaml up -d
+#
+# Posture (a) "Cloudflare-friendly" from the corpus. For posture (c) self-host,
+# swap this file for an OpenZiti or frp+oauth2-proxy overlay; the base stack is
+# unchanged.
+
+name: docbox
+
+services:
+  cloudflared:
+    image: ${CLOUDFLARED_IMAGE:-cloudflare/cloudflared:2025.7.0}
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      # Token from the Cloudflare Zero Trust dashboard for this named tunnel.
+      TUNNEL_TOKEN: "${CLOUDFLARED_TOKEN}"
+    # Reaches oauth2-proxy over agent-net; publishes no host port itself.
+    networks: [agent-net]
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    depends_on: [oauth2-proxy]
+
+networks:
+  # Declared to match the base stack so the overlay attaches to the same bridge.
+  agent-net:
+    driver: bridge

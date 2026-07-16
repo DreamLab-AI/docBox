@@ -1,0 +1,124 @@
+# foreman.toml — the canonical config manifest for a docBox instance.
+#
+# This is the real configuration. Foreman's Configuration tab (app/src/data/mock.ts
+# `configOptions`) is a typed editor over exactly these keys; every option there
+# maps one-to-one to a key here. Each option carries an APPLY-CLASS that decides
+# how a change lands (ADR-002):
+#
+#   live     applies now to the running box
+#   session  applies to new agent sessions
+#   rebuild  writes this file → builds a new image → healthcheck → blue/green
+#            cutover → auto-rollback on failure (scripts/rebuild.sh)
+#
+# The apply-class of each key is noted inline so the file reads the same way the
+# UI badges it. Secrets are NEVER stored here — keys are held in .env / the vault
+# and referenced by name (see [providers.*].key_ref).
+
+# ===========================================================================
+# Providers & models — where agent calls are routed. Metered API keys only;
+# a personal Claude subscription OAuth token is never bridged into the harness
+# (corpus/12-agent-harness/permissive-harnesses.md).
+# ===========================================================================
+[providers.anthropic]
+enabled = true            # apply-class: live  — default engine for overhaul work
+key_ref = "ANTHROPIC_API_KEY"   # name of the .env/vault secret; agents never read it raw
+
+[providers.openai]
+enabled = true            # apply-class: live  — alternative / fallback provider
+key_ref = "OPENAI_API_KEY"
+
+[providers.deepseek]
+# Off by default: hosted in China, no UK/EU data adequacy. Self-host the open
+# weights for personal or regulated data instead.
+enabled = false           # apply-class: live
+
+[providers.glm]
+# Same residency caveat as DeepSeek — dev and non-sensitive workloads only.
+enabled = false           # apply-class: live
+
+[models]
+default_route = "anthropic"   # apply-class: session  — one of: anthropic | openai | local
+
+[models.local]
+# Local model that runs with no provider key — keeps the box working offline and
+# cheap for background tasks. Changing which weights ship is a rebuild.
+name = "qwen3-8b"         # apply-class: rebuild  — one of: qwen3-4b | qwen3-8b | gemma-4-e4b
+
+# ===========================================================================
+# Toolchain bundles — the three TOML-gated Dockerfile bundles
+# (corpus/13-toolchain/dev-toolchain-loadout.md). Each key becomes a --build-arg.
+# All are rebuild-class: turning a bundle on or off changes the image.
+# ===========================================================================
+[toolchain]
+ts_dashboard = true       # apply-class: rebuild  — Biome + Vite + Vitest + Playwright
+python = true             # apply-class: rebuild  — uv + Python 3.11/3.12/3.13 + JupyterLab + papermill
+typesetting = "typst"     # apply-class: rebuild  — one of: off | typst | full-latex (+~5GB)
+playwright_browsers = true # apply-class: rebuild  — bake Chromium (~400MB) for the team's own E2E
+
+# ===========================================================================
+# Identity & access — Microsoft Entra SSO (corpus/05-identity/entra-sso.md).
+# Use App Roles, not raw group claims. The client secret lives in .env.
+# ===========================================================================
+[identity]
+require_mfa = true        # apply-class: live     — enforce MFA at sign-in via Conditional Access
+session_ttl_min = 15      # apply-class: live     — internal session-token lifetime (minutes)
+
+[identity.entra]
+tenant = "00000000-0000-0000-0000-000000000000"  # apply-class: rebuild  — Entra directory (tenant) ID
+admin_role = "Sandbox.Admin"                      # apply-class: session  — App Role mapped to control-plane admin
+
+# ===========================================================================
+# Network exposure (corpus/06-network-exposure/secure-tunnels.md). The egress
+# allowlist is the load-bearing control: init-firewall.sh reads it to build a
+# default-deny outbound firewall.
+# ===========================================================================
+[network]
+posture = "cloudflare"    # apply-class: rebuild  — one of: cloudflare | microsoft | selfhost
+loopback_only = true      # apply-class: rebuild  — bind host ports to 127.0.0.1 only
+# apply-class: live — domains the agent may reach outbound. Add only what is
+# genuinely needed; init-firewall.sh resolves and allows exactly these.
+egress_allowlist = [
+  "api.anthropic.com",
+  "api.openai.com",
+  "registry.npmjs.org",
+  "pypi.org",
+  "files.pythonhosted.org",
+  "github.com",
+  "objects.githubusercontent.com",
+]
+
+# ===========================================================================
+# Per-project encrypted vaults (corpus/05-identity/encrypted-vaults.md).
+# ===========================================================================
+[vaults]
+engine = "gocryptfs-unlock"   # apply-class: rebuild  — one of: gocryptfs-unlock (zero privilege) | gocryptfs-fuse
+key_source = "azure-kv"       # apply-class: rebuild  — one of: azure-kv | openbao
+auto_lock_min = 30            # apply-class: live     — re-lock a vault after this idle period (minutes)
+
+# ===========================================================================
+# Audit trail — write-only sidecar, hash-chained, off-box anchored
+# (corpus/09-observability-audit/audit-architecture.md).
+# ===========================================================================
+[audit]
+enabled = true            # apply-class: session  — record every agent action to the write-only sidecar
+log_tool_content = false  # apply-class: session  — store full tool args/output, not just hashes (secrets redacted either way)
+anchor_interval_min = 60  # apply-class: live     — how often the chain head is signed and shipped off-box
+siem_export = false       # apply-class: live     — forward records as CEF over syslog
+
+# ===========================================================================
+# Snapshots & overhaul safety (corpus/10-architecture/snapshot-rollback.md).
+# These govern scripts/rebuild.sh and scripts/rollback.sh.
+# ===========================================================================
+[snapshots]
+auto_rollback = true      # apply-class: live     — if a rebuilt stack fails its healthcheck, never cut over
+retain = 8                # apply-class: live     — prior image tags + restic snapshots to keep
+data_probe = true         # apply-class: live     — read-only data-compatibility probe before cutover
+
+# ===========================================================================
+# Agent harness (corpus/12-agent-harness/permissive-harnesses.md).
+# ===========================================================================
+[agents]
+engine = "pi"             # apply-class: rebuild  — one of: pi | opencode | goose
+max_parallel = 6          # apply-class: live     — concurrency ceiling for spawned sub-agents
+ledger = "beads"          # apply-class: rebuild  — one of: beads | backlog.md | off
+overhaul_gate = true      # apply-class: live     — require a named human to approve CTO-scale overhauls

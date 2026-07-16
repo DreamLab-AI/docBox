@@ -1,0 +1,55 @@
+name: Feature request
+description: Suggest a change or new capability.
+title: "[feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Two steers shape this project: it is a distillation, not a maximalist box, and
+        maintainability beats capability. New moving parts need a reason — please make the case below.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem does this solve? Who hits it, and when?
+      placeholder: An admin cannot tell which config changes trigger a rebuild before applying them.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: What should happen? Describe the smallest change that solves the problem.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Owner area
+      description: Which part of the repo would this touch?
+      options:
+        - app (control-plane UI)
+        - server (backend adapters)
+        - docker (container definitions)
+        - docs (design docs and corpus)
+        - corpus (research survey)
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you weighed, and why you did not pick them.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Fit
+      options:
+        - label: This keeps the tool count low (one tool per job) and stays maintainable.
+          required: false
+        - label: Any new dependency it needs is permissively licensed (MIT / Apache-2.0 / BSD).
+          required: false

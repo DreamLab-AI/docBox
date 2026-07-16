@@ -1,0 +1,242 @@
+# docBox stack — single-host compose for the pilot (PRD-000 defers k8s/multi-host).
+#
+# NETWORK BOUNDARY (corpus/09-observability-audit/audit-architecture.md):
+#   Write-only audit is enforced TOPOLOGICALLY, not by a promise in a handler.
+#     - agent-net : control-plane, oauth2-proxy, agent, browser/vault sidecars,
+#                   and ONLY the audit sidecar's ingest interface. This is where
+#                   agents live and where egress is shaped by init-firewall.
+#     - audit-net : audit sidecar + audit storage (+ read console / SIEM
+#                   forwarder). NO agent is attached. `internal: true` keeps the
+#                   audit store off every other network. The sidecar is
+#                   dual-homed; it accepts POSTs on agent-net and only ever reads
+#                   its own volume on audit-net, so agents have no route to the
+#                   read path.
+#
+# THREE STATE PLANES (corpus/10-architecture/snapshot-rollback.md) are kept in
+# separate named volumes so the rollback boundary can cut System-Definition
+# without touching User-Data or Audit:
+#     docbox-system     System-Definition plane state (rollback target)
+#     docbox-user-data  User-Data plane — projects/workspaces (never rolled back)
+#     docbox-audit      Audit plane — append-only WORM (never rolled back)
+#     docbox-vaults     gocryptfs cipherdirs (User-Data plane, at-rest encrypted)
+#
+# HOST PORTS are bound to 127.0.0.1 only (network.loopback_only). The box is
+# reached from outside through the cloudflared tunnel overlay (compose.tunnel.yaml),
+# never an open inbound port.
+
+name: docbox
+
+# ---------------------------------------------------------------------------
+# Reusable hardening anchor. Every service starts from deny-by-default and adds
+# back only the capability it genuinely needs.
+# ---------------------------------------------------------------------------
+x-hardening: &hardening
+  security_opt:
+    - "no-new-privileges:true"
+  cap_drop:
+    - ALL
+  restart: unless-stopped
+
+services:
+
+  # =========================================================================
+  # oauth2-proxy — Microsoft Entra forward-auth (corpus/05-identity/entra-sso.md).
+  # The single authenticated entry point. The tunnel targets THIS port; it
+  # forward-auths every request against Entra (ms_entra_id provider, App Roles
+  # Sandbox.Admin / Sandbox.User) before proxying to the control plane. Stateless
+  # Go binary, no DB. MIT.
+  # =========================================================================
+  oauth2-proxy:
+    <<: *hardening
+    image: ${OAUTH2_PROXY_IMAGE:-quay.io/oauth2-proxy/oauth2-proxy:v7.7.1}
+    env_file: [.env]
+    environment:
+      OAUTH2_PROXY_PROVIDER: "ms-entra-id"
+      OAUTH2_PROXY_OIDC_ISSUER_URL: "https://login.microsoftonline.com/${ENTRA_TENANT_ID}/v2.0"
+      OAUTH2_PROXY_CLIENT_ID: "${ENTRA_CLIENT_ID}"
+      OAUTH2_PROXY_CLIENT_SECRET: "${ENTRA_CLIENT_SECRET}"
+      OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
+      # Forward-auth in front of the control plane; loopback upstream.
+      OAUTH2_PROXY_UPSTREAMS: "http://control-plane:8788"
+      OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
+      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+    ports:
+      # Loopback only — the tunnel connects here, never a public interface.
+      - "127.0.0.1:${FOREMAN_PORT:-8443}:4180"
+    networks: [agent-net]
+    depends_on: [control-plane]
+
+  # =========================================================================
+  # control-plane — Foreman: the Hono server + built React UI (repo server/ + app/).
+  # Renders the six tabs, owns foreman.toml, and drives the agent + rebuild
+  # orchestration. Bound loopback-only for direct admin/debug; normal traffic
+  # arrives pre-authenticated from oauth2-proxy.
+  #
+  # NOTE: server/ lands in M2. Its build file (docker/Dockerfile.control-plane)
+  # is written then; referenced here so the topology is complete now.
+  # =========================================================================
+  control-plane:
+    <<: *hardening
+    image: ${DOCBOX_REGISTRY:-docbox}/control-plane:${DOCBOX_TAG:-dev}
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.control-plane   # M2 deliverable
+    env_file: [.env]
+    environment:
+      FOREMAN_CONFIG: "/etc/docbox/foreman.toml"
+      AUDIT_INGEST_URL: "http://audit-sidecar:9000/v1/events"
+      AGENT_HOST: "agent"
+    volumes:
+      - ./foreman.toml:/etc/docbox/foreman.toml:ro   # the manifest the UI edits
+      - docbox-system:/var/lib/docbox/system         # System-Definition plane
+      - /var/run/docker.sock:/var/run/docker.sock:ro # observe stack (rebuild reads state)
+    ports:
+      - "127.0.0.1:${CONTROL_PLANE_PORT:-8788}:8788"
+    read_only: true
+    tmpfs: ["/tmp"]
+    networks: [agent-net]
+    depends_on: [audit-sidecar]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8788/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  # =========================================================================
+  # agent — the sandbox image (this repo's docker/Dockerfile). Hosts the pi
+  # engine (run on demand by the control plane) and the persistent code-server
+  # editor. Attached to agent-net ONLY: it can reach the audit ingest port and
+  # the sidecars, and its egress is shaped by init-firewall (default-deny +
+  # foreman egress_allowlist). It has NO route to audit-net.
+  # =========================================================================
+  agent:
+    <<: *hardening
+    image: ${DOCBOX_REGISTRY:-docbox}/sandbox:${DOCBOX_TAG:-dev}
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        # Bundle gates come from .env, which the control plane writes from
+        # foreman.toml [toolchain] on a rebuild-class change.
+        TS_DASHBOARD: "${TS_DASHBOARD:-1}"
+        PYTHON: "${PYTHON:-1}"
+        TYPESETTING: "${TYPESETTING:-typst}"
+        PLAYWRIGHT_BROWSERS: "${PLAYWRIGHT_BROWSERS:-1}"
+    env_file: [.env]
+    environment:
+      # Identity is injected by the trusted spawner, never forgeable by prompt
+      # content (corpus/09). The HMAC key is mounted read-only, not passed here.
+      AUDIT_INGEST_URL: "http://audit-sidecar:9000/v1/events"
+    volumes:
+      - docbox-user-data:/workspace                  # User-Data plane
+      - docbox-vaults:/vaults                         # gocryptfs cipherdirs
+      - docbox-pnpm-store:/usr/local/pnpm/store       # shared pnpm store (cache)
+      - docbox-uv-store:/opt/uv/cache                 # shared uv store (cache)
+    # init-firewall needs NET_ADMIN to install the egress allowlist at start;
+    # it drops back to the deny-default table and the agent runs unprivileged.
+    cap_add: [NET_ADMIN]
+    command:
+      - code-server
+      - --auth
+      - none
+      - --bind-addr
+      - 0.0.0.0:8080
+      - /workspace
+    ports:
+      # Loopback only; sits behind oauth2-proxy forward-auth in production.
+      - "127.0.0.1:${CODE_SERVER_PORT:-8080}:8080"
+    networks: [agent-net]
+    depends_on: [audit-sidecar]
+
+  # =========================================================================
+  # audit-sidecar — write-only, append-only, DUAL-HOMED. Ingest (POST /v1/events)
+  # is served on agent-net; the audit volume and any read/query path live on
+  # audit-net where no agent can reach. The append-only inode (chattr +a) on the
+  # active segment is set by a privileged init that then drops CAP_LINUX_IMMUTABLE
+  # — even a compromised sidecar can append but not truncate or rewrite.
+  #
+  # NOTE: the sidecar image (docker/Dockerfile.audit) + audit-hook are M6.
+  # =========================================================================
+  audit-sidecar:
+    <<: *hardening
+    image: ${DOCBOX_REGISTRY:-docbox}/audit-sidecar:${DOCBOX_TAG:-dev}
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.audit            # M6 deliverable
+    env_file: [.env]
+    environment:
+      AUDIT_INGEST_ADDR: "0.0.0.0:9000"              # agent-net ingest only
+      AUDIT_ANCHOR_INTERVAL_MIN: "${AUDIT_ANCHOR_INTERVAL_MIN:-60}"
+    volumes:
+      # Owned by a dedicated audit uid, mounted into NO agent container.
+      - docbox-audit:/var/lib/docbox/audit
+    # LINUX_IMMUTABLE lets the init set the append-only inode, then it is dropped.
+    cap_add: [LINUX_IMMUTABLE]
+    networks:
+      - agent-net    # ingest interface (write path)
+      - audit-net    # storage + read console (never crosses to agents)
+
+  # =========================================================================
+  # browser-sidecar — confined chrome-devtools for agent browsing. Isolated on
+  # agent-net, no host port, hardened. Emits ARTIFACT events (screenshots/network
+  # by content hash) to the audit sidecar. Never given a writable app mount.
+  # =========================================================================
+  browser-sidecar:
+    <<: *hardening
+    image: ${BROWSER_IMAGE:-ghcr.io/browserless/chromium:latest}
+    env_file: [.env]
+    # Chromium needs shared memory; give it a bounded tmpfs instead of host shm.
+    shm_size: "512m"
+    read_only: true
+    tmpfs: ["/tmp"]
+    networks: [agent-net]
+
+  # =========================================================================
+  # vault-sidecar — gocryptfs live-FUSE unlock (corpus/05-identity/encrypted-vaults.md).
+  # OPTIONAL: only the "gocryptfs-fuse" engine needs a live sidecar and the FUSE
+  # privileges below. The DEFAULT engine (gocryptfs-unlock, decrypt-on-unlock)
+  # needs ZERO container privilege and no sidecar at all — the control plane runs
+  # the unlock job and the agent mounts a plain volume. Guarded by a profile so
+  # it is absent unless explicitly requested.
+  # =========================================================================
+  vault-sidecar:
+    <<: *hardening
+    image: ${DOCBOX_REGISTRY:-docbox}/vault-sidecar:${DOCBOX_TAG:-dev}
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.vault            # M6 deliverable
+    profiles: ["vault-fuse"]
+    env_file: [.env]
+    # gocryptfs FUSE needs /dev/fuse + SYS_ADMIN + apparmor:unconfined on Ubuntu
+    # — NOT --privileged. Only the fuse engine takes on this surface.
+    cap_add: [SYS_ADMIN]
+    devices: ["/dev/fuse"]
+    security_opt:
+      - "no-new-privileges:true"
+      - "apparmor:unconfined"
+    volumes:
+      - docbox-vaults:/vaults
+    networks: [agent-net]
+
+networks:
+  # Control-plane + agents + sidecar ingest. Egress is shaped by init-firewall,
+  # so this is a normal bridge (NOT internal — providers/registries must be
+  # reachable through the allowlist).
+  agent-net:
+    driver: bridge
+  # Audit storage isolation. internal:true means nothing here can reach any
+  # other network or the internet. The off-box anchor/SIEM forwarder (M6)
+  # attaches separately to a dedicated egress, never to the store's network.
+  audit-net:
+    driver: bridge
+    internal: true
+
+volumes:
+  docbox-system:      # System-Definition plane — rollback target
+  docbox-user-data:   # User-Data plane — never a rollback target
+  docbox-audit:       # Audit plane — append-only WORM, never a rollback target
+  docbox-vaults:      # gocryptfs cipherdirs
+  docbox-pnpm-store:  # shared pnpm content store (cache, not a plane)
+  docbox-uv-store:    # shared uv package cache (cache, not a plane)

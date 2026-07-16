@@ -1,0 +1,18 @@
+{
+  "name": "docbox",
+  "private": true,
+  "version": "0.2.0",
+  "description": "docBox — self-contained client dev sandbox with an agentic control plane",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @docbox/server dev",
+    "dev:app": "pnpm --filter @docbox/app dev",
+    "dev:server": "pnpm --filter @docbox/server dev",
+    "build": "pnpm --filter @docbox/app build",
+    "typecheck": "pnpm -r typecheck",
+    "start": "pnpm --filter @docbox/server start"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

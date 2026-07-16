@@ -1,4 +1,49 @@
 # Agent tooling state — not part of the research corpus
 .agentic-qe/
 .claude-flow/
+
+# Dependencies
 node_modules/
+
+# Build output
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Local preview artifacts (never committed)
+_preview/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment and secrets — every variant (a template may be committed)
+.env
+.env.*
+!.env.example
+
+# pnpm store
+.pnpm-store/
+
+# Vite cache
+.vite/
+
+# OS cruft
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editor cruft
+.idea/
+*.swp
+*.swo
+*~
+
+# Note: lockfiles (pnpm-lock.yaml) are committed deliberately — do not ignore them.

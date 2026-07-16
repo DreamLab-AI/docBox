@@ -1,0 +1,5 @@
+# Real environment file — secrets. Never committed. Use .env.example as the template.
+.env
+
+# Rebuild bookkeeping written by scripts/rebuild.sh
+.last-good-tag

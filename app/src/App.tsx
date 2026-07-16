@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { store, applyClassHelp } from './data/adapter';
+import { IS_LIVE, subscribeActions } from './data/live';
 import { OwnerTag, StatusPip, fmtAgo } from './ui/primitives';
 import OverviewTab from './features/overview/OverviewTab';
 import VisualiserTab from './features/visualiser/VisualiserTab';
@@ -21,6 +22,10 @@ const TABS: { id: TabId; label: string; hint: string; render: () => JSX.Element 
 
 export function App() {
   const [tab, setTab] = useState<TabId>('overview');
+  // In live mode, new actions arriving over SSE bump this counter, which
+  // re-renders the active tab so it re-reads the store and shows the arrival.
+  const [, setLiveTick] = useState(0);
+  useEffect(() => subscribeActions(() => setLiveTick((n) => n + 1)), []);
   const sys = store.system();
   const active = TABS.find((t) => t.id === tab)!;
 
@@ -86,6 +91,10 @@ function TopBar() {
           <span className="muted">audit verified</span> {fmtAgo(sys.auditChainVerifiedAt, now)}
         </span>
         <span title="Embedded local model" className="muted">model <span className="mono" style={{ color: 'var(--fg-1)' }}>{sys.localModel}</span></span>
+        <span title={IS_LIVE ? 'Live data from the control-plane server' : 'Deterministic mock world (offline)'}
+          className="badge" style={{ borderColor: IS_LIVE ? 'var(--green)' : 'var(--line-strong)', color: IS_LIVE ? 'var(--green)' : 'var(--fg-2)' }}>
+          {IS_LIVE ? 'live' : 'mock'}
+        </span>
       </div>
     </header>
   );

@@ -1,0 +1,69 @@
+name: Bug report
+description: Report something that is broken or behaves incorrectly.
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please fill in the fields below so it can be reproduced quickly.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: A clear description of the bug and what you expected instead.
+      placeholder: When I open the Operations tab, the rollback button does nothing.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The exact steps that trigger the bug.
+      placeholder: |
+        1. cd app && pnpm dev
+        2. Open http://localhost:5173
+        3. Go to the Operations tab
+        4. Click Roll back
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Owner area
+      description: Which part of the repo does this affect?
+      options:
+        - app (control-plane UI)
+        - server (backend adapters)
+        - docker (container definitions)
+        - docs (design docs and corpus)
+        - corpus (research survey)
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Node version, pnpm version, OS, and browser if relevant.
+      placeholder: |
+        Node 24.x, pnpm 10.x, Ubuntu 24.04, Chrome 149
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste any relevant console output. It is automatically formatted as code.
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: This report contains no secrets (keys, tokens, .env values).
+          required: true
