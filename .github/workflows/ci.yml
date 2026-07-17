@@ -49,6 +49,11 @@ jobs:
       - name: Typecheck (app + server)
         run: pnpm -r run typecheck
 
+      # ADR-010: the frozen-contract boundary (ADR-009) as a mechanical gate —
+      # a panel that reaches past the adapter seam or imports another feature fails here.
+      - name: Boundary gate (dependency-cruiser)
+        run: pnpm --filter @docbox/app run depcruise
+
       - name: Build (app)
         run: pnpm --filter @docbox/app run build
 

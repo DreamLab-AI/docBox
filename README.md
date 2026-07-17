@@ -188,7 +188,8 @@ bind-mount limitation). See [docker/README.md](docker/README.md) for the build a
   [006](docs/reference/adr/ADR-006-snapshot-store.md) ·
   [007 primary-user surface](docs/reference/adr/ADR-007-primary-user-surface.md) ·
   [008 self-modifying interface](docs/reference/adr/ADR-008-live-self-modifying-interface.md) ·
-  [009 slim core/modules](docs/reference/adr/ADR-009-slim-core-surfaces-as-modules.md)
+  [009 slim core/modules](docs/reference/adr/ADR-009-slim-core-surfaces-as-modules.md) ·
+  [010 panel registry + boundary gate](docs/reference/adr/ADR-010-panel-registry-and-boundary-gate.md)
 - DDD [001 domain model](docs/reference/ddd/DDD-001-control-plane-domain.md) ·
   [002 overhaul lifecycle](docs/reference/ddd/DDD-002-overhaul-lifecycle.md) ·
   [003 interface domain](docs/reference/ddd/DDD-003-interface-domain.md)

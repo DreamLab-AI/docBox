@@ -74,6 +74,10 @@ the contract between feature modules and the outside world. Feature modules unde
 each other's internals, and never straight from the mock. Swapping the mock for a real backend is a
 rewrite of `app/src/data/adapter.ts` and nothing else; keep it that way.
 
+This is enforced mechanically, not just by review: `dependency-cruiser` (`app/.dependency-cruiser.cjs`)
+runs in CI and fails the build on a cross-feature import or a direct mock/live import. Panels are
+added through the typed, validated registry (`app/src/ui/panels.ts`); see ADR-010.
+
 ### 4. One tool per job
 
 Two steers shape every decision, both from the client: this is a **distillation, not a maximalist
