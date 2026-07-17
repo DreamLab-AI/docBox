@@ -193,6 +193,7 @@ export const modules: ModuleInfo[] = [
   { id: 'vault', name: 'Vaults', layer: 'module', state: 'on', service: 'vault-sidecar', gate: 'vaults.engine', reach: 'sidecar', applyClass: 'rebuild', summary: 'gocryptfs per-project encrypted storage, unlocked via SSO.' },
   { id: 'ledger', name: 'Work ledger', layer: 'module', state: 'on', gate: 'agents.ledger', reach: 'core-api', applyClass: 'rebuild', summary: 'beads dependency-graphed work items behind a narrow interface.' },
   { id: 'tunnel', name: 'Tunnel', layer: 'module', state: 'off', service: 'cloudflared', gate: 'network.posture', reach: 'sidecar', applyClass: 'rebuild', summary: 'Zero-inbound exposure via cloudflared + Access (overlay).' },
+  { id: 'qe-fleet', name: 'QE fleet', layer: 'module', state: 'available', gate: 'dev.qe_fleet', reach: 'core-api', applyClass: 'session', summary: 'Agentic test-generation and coverage building during development; on in a dev box, off in a locked deployment.' },
 ];
 
 export const systemStatus: SystemStatus = {
@@ -262,6 +263,7 @@ export const configOptions: ConfigOption[] = [
   { key: 'agents.max_parallel', label: 'Max parallel agents', help: 'Concurrency ceiling for spawned sub-agents.', whenToUse: 'Raise for throughput on a big host; lower to bound cost and load.', applyClass: 'live', type: 'number', value: 6, group: 'Harness', tab: 'agents' },
   { key: 'agents.ledger', label: 'Work ledger', help: 'Where long-horizon agent work is tracked.', whenToUse: 'beads gives dependency graphs and approval gates. backlog.md is the simpler option.', applyClass: 'rebuild', type: 'enum', value: 'beads', options: ['beads', 'backlog.md', 'off'], group: 'Work ledger', tab: 'agents' },
   { key: 'agents.overhaul_gate', label: 'Overhaul approval gate', help: 'Require a named human to approve CTO-scale overhauls.', whenToUse: 'Keep on. A chat request should not be able to rebuild the system without sign-off.', applyClass: 'live', type: 'boolean', value: true, group: 'Work ledger', tab: 'agents' },
+  { key: 'dev.qe_fleet', label: 'QE fleet (dev)', help: 'Let agents build test coverage during development.', whenToUse: 'On in a development box so agents can generate and run tests as they build. Off in a locked client deployment where no test-authoring should happen.', applyClass: 'session', type: 'boolean', value: false, group: 'Development', tab: 'agents' },
 
   // interface — the self-modifying surface. These are hot: the agent applies
   // them through hot reload or the layout manifest, sub-second, with no rebuild.

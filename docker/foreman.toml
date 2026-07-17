@@ -149,3 +149,9 @@ engine = "pi"             # apply-class: rebuild  — one of: pi | opencode | go
 max_parallel = 6          # apply-class: live     — concurrency ceiling for spawned sub-agents
 ledger = "beads"          # apply-class: rebuild  — one of: beads | backlog.md | off
 overhaul_gate = true      # apply-class: live     — require a named human to approve CTO-scale overhauls
+
+[dev]
+# Module: qe-fleet (ADR-009). Agentic test-generation and coverage building
+# during development. On in a dev box so agents can author and run tests as they
+# build; off in a locked client deployment where no test-authoring should run.
+qe_fleet = false          # apply-class: session

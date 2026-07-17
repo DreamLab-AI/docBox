@@ -145,9 +145,15 @@ if (existsSync(APP_DIST)) {
   app.get('/*', serveStatic({ path: join(APP_DIST, 'index.html') }));
 }
 
-serve({ fetch: app.fetch, port: PORT }, (info) => {
-  console.log(`docBox control-plane server on http://127.0.0.1:${info.port}`);
-  console.log(`  world:  GET  /api/world`);
-  console.log(`  config: GET/PUT /api/config   (toml: ${TOML_PATH})`);
-  console.log(`  events: GET  /api/events (SSE)`);
-});
+// Export the app so tests can drive it via app.request() without binding a port.
+export { app };
+
+// Only bind a port when run directly, not when imported by a test.
+if (process.env.DOCBOX_NO_LISTEN !== '1') {
+  serve({ fetch: app.fetch, port: PORT }, (info) => {
+    console.log(`docBox control-plane server on http://127.0.0.1:${info.port}`);
+    console.log(`  world:  GET  /api/world`);
+    console.log(`  config: GET/PUT /api/config   (toml: ${TOML_PATH})`);
+    console.log(`  events: GET  /api/events (SSE)`);
+  });
+}

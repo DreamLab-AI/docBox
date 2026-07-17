@@ -24,11 +24,8 @@ concurrency:
 
 jobs:
   build:
-    name: Typecheck and build (app)
+    name: Typecheck, build and test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: app
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.0
@@ -43,16 +40,23 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          cache-dependency-path: app/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
+      # One install for the whole workspace (app + server); scripts run per-package.
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck
-        run: pnpm run typecheck
+      - name: Typecheck (app + server)
+        run: pnpm -r run typecheck
 
-      - name: Build
-        run: pnpm run build
+      - name: Build (app)
+        run: pnpm --filter @docbox/app run build
+
+      - name: Test with coverage (app)
+        run: pnpm --filter @docbox/app run test:coverage
+
+      - name: Test with coverage (server)
+        run: pnpm --filter @docbox/server run test:coverage
 
   docs-prose:
     name: Docs prose scan

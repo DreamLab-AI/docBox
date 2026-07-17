@@ -47,3 +47,8 @@ Desktop.ini
 *~
 
 # Note: lockfiles (pnpm-lock.yaml) are committed deliberately — do not ignore them.
+.npmrc
+coverage/
+.pnpm-store/
+.pnpm-cache/
+.pnpm-tmp/
