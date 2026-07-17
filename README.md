@@ -147,13 +147,13 @@ docBox/
 │       ├── data/mock.ts       ← deterministic seeded world
 │       ├── data/live.ts       ← hydrate from the server + SSE subscription
 │       └── features/          ← one directory per tab
-├── server/                   ← control-plane server (Hono): /api/world, /api/config, /api/events, /api/documents
+├── server/                   ← control-plane (Hono): /api/world·config·events·documents·engine; engine/ + audit/ seams
 ├── extension/                ← code-server companion (VS Code sidebar): chat + documents dock (ADR-007)
-├── docker/                   ← Dockerfile, compose (+ local-model, local-ocr), foreman.toml, README
-├── scripts/                  ← rebuild.sh (blue/green), rollback.sh, init-firewall.sh
+├── docker/                   ← Dockerfiles (sandbox + control-plane/audit/vault/browser), compose, foreman.toml, README
+├── scripts/                  ← rebuild.sh (blue/green), rollback.sh, init-firewall.sh (egress allowlist)
 ├── docs/reference/           ← PRD / ADR / DDD
 ├── corpus/                   ← licence-verified research
-└── .github/                  ← CI (typecheck, build, prose gate, secret scan)
+└── .github/                  ← CI (typecheck, boundary gate, build, tests, prose gate, secret scan)
 ```
 
 ## Running it
@@ -208,7 +208,14 @@ flowchart LR
   M6 --> M7["M7 · Chat bubble"]
   style M1 fill:#0e2b28,stroke:#33c2b4
   style M2 fill:#0e2b28,stroke:#33c2b4
+  style M3 fill:#2b2410,stroke:#f0a53a
+  style M4 fill:#2b2410,stroke:#f0a53a
+  style M5 fill:#2b2410,stroke:#f0a53a
+  style M6 fill:#2b2410,stroke:#f0a53a
 ```
+
+Green is shipped and judged, amber is in progress (M3–M6: seams built, host-runtime wiring remains),
+unstyled M7 is not started.
 
 M3's engine seam and M6's audit service are built and tested behind the adapter pattern
 (`server/src/engine/`, `server/src/audit/`); M4's container definitions and the default-deny egress
