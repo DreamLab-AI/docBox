@@ -303,6 +303,62 @@ describe('GET /api/events (SSE)', () => {
   }, 5000);
 });
 
+describe('GET /api/engine/health', () => {
+  it('reports the deterministic mock engine by default', async () => {
+    const res = await app.request('/api/engine/health');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.engine).toBe('mock');
+    expect(body.ready).toBe(true);
+    expect(body.protocol).toBe('in-process-deterministic');
+  });
+});
+
+describe('POST /api/engine/prompt', () => {
+  it('runs a mock trajectory and returns an ordered event list', async () => {
+    const res = await app.request('/api/engine/prompt', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ sessionId: 's1', prompt: 'add an export endpoint' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.sessionId).toBe('s1');
+    expect(Array.isArray(body.events)).toBe(true);
+    expect(body.events[0].kind).toBe('session_start');
+    expect(body.events[body.events.length - 1].kind).toBe('session_end');
+  });
+
+  it('is deterministic: the same prompt yields identical events', async () => {
+    const post = () =>
+      app
+        .request('/api/engine/prompt', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ sessionId: 's', prompt: 'same input' }),
+        })
+        .then((r) => r.json());
+    const [a, b] = await Promise.all([post(), post()]);
+    expect(a.events).toEqual(b.events);
+  });
+
+  it('rejects an empty or unparseable body with 400', async () => {
+    const empty = await app.request('/api/engine/prompt', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(empty.status).toBe(400);
+    const garbage = await app.request('/api/engine/prompt', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '}{ not json',
+    });
+    expect(garbage.status).toBe(400);
+  });
+});
+
 describe('module entrypoint', () => {
   it('binds via serve() when not imported by a test (DOCBOX_NO_LISTEN unset)', async () => {
     vi.resetModules();

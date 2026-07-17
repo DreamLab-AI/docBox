@@ -1,0 +1,111 @@
+# syntax=docker/dockerfile:1.7
+#
+# docBox control-plane image — Foreman: the Hono server plus the built React UI.
+#
+# Design steer (PRD-000): a distillation, not agentbox. One plain multi-stage
+# build, a digest-pinnable base, non-root at runtime. The server package
+# (@docbox/server) serves the compiled app bundle (@docbox/app) as static files,
+# so both packages are built here and the whole pnpm workspace layout is carried
+# into the runtime image unchanged — the server resolves the UI bundle and its
+# domain model through workspace-relative paths, so flattening the tree would
+# break those resolutions.
+#
+# CONTRACT with the server package (owned elsewhere in the repo):
+#   pnpm --filter @docbox/app    build   → app/dist  (static UI the server hosts)
+#   pnpm --filter @docbox/server build   → server/dist
+#   pnpm --filter @docbox/server start    → binds PORT and serves /api + the UI
+# The server MUST listen: DOCBOX_NO_LISTEN is left unset here on purpose (setting
+# it to 1 is the test-only path that imports the app without binding a port).
+#
+# THIS REPO DOES NOT BUILD IMAGES IN CI (docker-in-docker with bind mounts is
+# broken in the dev environment). Build on a real host or a Docker-capable CI
+# runner — see docker/README.md.
+
+# ---------------------------------------------------------------------------
+# Base ref is an ARG so CI/the control plane can digest-pin it, e.g.
+#   --build-arg NODE_IMAGE=node:24-bookworm-slim@sha256:<digest>
+# node:24-bookworm-slim IS "debian bookworm slim + Node 24 + corepack".
+# ---------------------------------------------------------------------------
+ARG NODE_IMAGE=node:24-bookworm-slim
+ARG PNPM_VERSION=10.15.0
+
+# ===========================================================================
+# Stage: base — pnpm via corepack, curl for the healthcheck, tini for reaping.
+# Shared by the build and runtime stages.
+# ===========================================================================
+FROM ${NODE_IMAGE} AS base
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ARG PNPM_VERSION
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    PNPM_HOME=/usr/local/pnpm \
+    PATH=/usr/local/pnpm:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin
+
+# curl is used by the HEALTHCHECK; tini reaps any child the server spawns. No apt
+# pinning — the base is digest-pinned instead, which fixes the apt snapshot.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      tini \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN corepack enable && corepack prepare "pnpm@${PNPM_VERSION}" --activate
+
+# ===========================================================================
+# Stage: build — install the workspace, build the UI bundle then the server.
+# ===========================================================================
+FROM base AS build
+
+WORKDIR /app
+
+# Manifests first so the install layer caches until a dependency actually moves.
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
+COPY app/package.json app/package.json
+COPY server/package.json server/package.json
+
+RUN --mount=type=cache,target=/root/.cache,uid=0,gid=0 \
+    pnpm install --frozen-lockfile
+
+# Sources (node_modules and build outputs are excluded via the build-ignore file
+# docker/Dockerfile.control-plane.dockerignore, so the install layer stands).
+COPY . .
+
+# Build the static UI the server hosts, then the server itself.
+RUN --mount=type=cache,target=/root/.cache,uid=0,gid=0 \
+    pnpm --filter @docbox/app build \
+    && pnpm --filter @docbox/server build
+
+# ===========================================================================
+# Stage: runtime — non-root, carries the built workspace, listens on 8788.
+# ===========================================================================
+FROM base AS runtime
+
+# Non-root user that owns the app tree. uid 1001 avoids the base image's own
+# `node` user (uid 1000).
+RUN groupadd --gid 1001 app \
+    && useradd --uid 1001 --gid 1001 --create-home --shell /usr/sbin/nologin app
+
+WORKDIR /app
+COPY --from=build --chown=app:app /app /app
+
+ENV NODE_ENV=production \
+    PORT=8788 \
+    FOREMAN_CONFIG=/etc/docbox/foreman.toml
+
+LABEL org.opencontainers.image.title="docBox control-plane" \
+      org.opencontainers.image.description="Foreman: Hono control plane + built React UI, serving /api and the eight-tab console" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.source="https://example.invalid/docbox"
+
+USER app
+EXPOSE 8788
+
+# Hits the same endpoint the compose healthcheck uses; shell form so the literal
+# port is unambiguous.
+HEALTHCHECK --interval=15s --timeout=3s --retries=5 --start-period=20s \
+  CMD curl -fsS http://localhost:8788/api/health || exit 1
+
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["pnpm", "--filter", "@docbox/server", "start"]

@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
+    "start:audit": "node dist/audit/ingest.js",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "DOCBOX_NO_LISTEN=1 vitest run",
     "test:coverage": "DOCBOX_NO_LISTEN=1 vitest run --coverage"

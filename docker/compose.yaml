@@ -4,8 +4,11 @@
 #   Write-only audit is enforced TOPOLOGICALLY, not by a promise in a handler.
 #     - agent-net : control-plane, oauth2-proxy, agent, browser/vault sidecars,
 #                   and ONLY the audit sidecar's ingest interface. This is where
-#                   agents live. Egress is NOT yet restricted: the init-firewall
-#                   allowlist is planned (script in scripts/) but not wired.
+#                   agents live. Egress IS restricted: the agent runs
+#                   scripts/init-firewall.sh at startup, which installs a
+#                   default-deny OUTPUT firewall and opens only the
+#                   foreman.toml egress_allowlist. NET_ADMIN is granted to the
+#                   agent service alone (see there) so it can apply those rules.
 #     - audit-net : audit sidecar + audit storage (+ read console / SIEM
 #                   forwarder). NO agent is attached. `internal: true` keeps the
 #                   audit store off every other network. The sidecar is
@@ -55,9 +58,13 @@ services:
   # =========================================================================
   # oauth2-proxy — Microsoft Entra forward-auth (corpus/05-identity/entra-sso.md).
   # The single authenticated entry point. The tunnel targets THIS port; it
-  # forward-auths every request against Entra (ms_entra_id provider, App Roles
-  # Sandbox.Admin / Sandbox.User) before proxying to the control plane. Stateless
-  # Go binary, no DB. MIT.
+  # authenticates every request against Entra (ms-entra-id provider) and admits
+  # only holders of the App Roles Sandbox.Admin / Sandbox.User before proxying to
+  # the control plane. Stateless Go binary, cookie session store, no DB. MIT.
+  #
+  # code-server (the `agent` service) carries no native OIDC and runs --auth none;
+  # it is reached THROUGH this proxy (the tunnel/edge terminates TLS, this gates
+  # the App Role) and its own 8080 publish is loopback-only debug — see `agent`.
   # =========================================================================
   oauth2-proxy:
     <<: *hardening
@@ -69,11 +76,34 @@ services:
       OAUTH2_PROXY_CLIENT_ID: "${ENTRA_CLIENT_ID}"
       OAUTH2_PROXY_CLIENT_SECRET: "${ENTRA_CLIENT_SECRET}"
       OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
-      # Forward-auth in front of the control plane; loopback upstream.
+      # Reverse-proxy the control plane; it arrives pre-authenticated.
       OAUTH2_PROXY_UPSTREAMS: "http://control-plane:8788"
       OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
-      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
       OAUTH2_PROXY_REVERSE_PROXY: "true"
+      # Authorisation is the App Role, not the email domain. Keep the domain gate
+      # open by default and let a deployment narrow it via .env; the role gate
+      # below is the load-bearing control.
+      OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_PROXY_EMAIL_DOMAINS:-*}"
+      OAUTH2_PROXY_SCOPE: "openid email profile"
+      # Admit only assigned App Roles (Entra emits them in the `roles` claim).
+      OAUTH2_PROXY_ALLOWED_ROLES: "${OAUTH2_PROXY_ALLOWED_ROLES:-Sandbox.Admin,Sandbox.User}"
+      # Session cookie hardening. Lifetime tracks foreman.toml identity.session_ttl_min.
+      OAUTH2_PROXY_SESSION_STORE_TYPE: "cookie"
+      # No __Host- prefix: it would hard-require Secure, but COOKIE_SECURE is
+      # configurable below so a local http tester can still sign in.
+      OAUTH2_PROXY_COOKIE_NAME: "_docbox_session"
+      OAUTH2_PROXY_COOKIE_HTTPONLY: "true"
+      OAUTH2_PROXY_COOKIE_SAMESITE: "lax"
+      # Secure cookies expect TLS (the tunnel/edge terminates it). A local tester
+      # hitting plain-http loopback can set this false in .env.
+      OAUTH2_PROXY_COOKIE_SECURE: "${OAUTH2_PROXY_COOKIE_SECURE:-true}"
+      OAUTH2_PROXY_COOKIE_EXPIRE: "${OAUTH2_PROXY_COOKIE_EXPIRE:-15m}"
+      OAUTH2_PROXY_COOKIE_REFRESH: "${OAUTH2_PROXY_COOKIE_REFRESH:-5m}"
+      # Skip the interstitial provider-select page; pass identity to the upstream.
+      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
+      OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
+      OAUTH2_PROXY_PASS_ACCESS_TOKEN: "false"
+      OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER: "false"
     ports:
       # Loopback only — the tunnel connects here, never a public interface.
       - "127.0.0.1:${FOREMAN_PORT:-8443}:4180"
@@ -86,21 +116,18 @@ services:
   # Configuration, Operations, System), owns foreman.toml, and drives the agent
   # + rebuild orchestration. Bound loopback-only for direct admin/debug; normal
   # traffic arrives pre-authenticated from oauth2-proxy.
-  #
-  # NOTE: server/ lands in M2. Its build file (docker/Dockerfile.control-plane)
-  # is written then; referenced here so the topology is complete now.
   # =========================================================================
   control-plane:
     <<: *hardening
     image: ${DOCBOX_REGISTRY:-docbox}/control-plane:${DOCBOX_TAG:-dev}
     build:
       context: ..
-      dockerfile: docker/Dockerfile.control-plane   # M2 deliverable
+      dockerfile: docker/Dockerfile.control-plane
     env_file: [.env]
     environment:
       PORT: "8788"                                    # bind port; matches the host mapping + oauth2 upstream
       FOREMAN_CONFIG: "/etc/docbox/foreman.toml"
-      AUDIT_INGEST_URL: "http://audit-sidecar:9000/v1/events"
+      AUDIT_INGEST_URL: "http://audit-sidecar:9099/v1/events"
       AGENT_HOST: "agent"
     volumes:
       - ./foreman.toml:/etc/docbox/foreman.toml:ro   # the manifest the UI edits
@@ -124,10 +151,13 @@ services:
   # editor. Attached to agent-net ONLY: it can reach the audit ingest port and
   # the sidecars. It has NO route to audit-net.
   #
-  # EGRESS IS CURRENTLY UNRESTRICTED. A default-deny egress firewall is planned:
-  # scripts/init-firewall.sh exists but is not installed into this image (not
-  # COPYed in, iptables absent) and is never invoked at startup, so the agent's
-  # outbound traffic is not yet shaped by any allowlist. Do not rely on it.
+  # EGRESS IS DEFAULT-DENY. The image ships scripts/init-firewall.sh and a startup
+  # wrapper (docker/docbox-entrypoint.sh); on start the wrapper runs the firewall
+  # as root — installing an iptables/ipset OUTPUT allowlist from the mounted
+  # foreman.toml egress_allowlist — then drops to the unprivileged `dev` user for
+  # code-server. DOCBOX_EGRESS_FIREWALL=1 makes this fail closed: no rules, no
+  # start. This is the ONE service granted NET_ADMIN (below), used once at startup
+  # then shed with the privilege drop.
   # =========================================================================
   agent:
     <<: *hardening
@@ -146,14 +176,22 @@ services:
     environment:
       # Identity is injected by the trusted spawner, never forgeable by prompt
       # content (corpus/09). The HMAC key is mounted read-only, not passed here.
-      AUDIT_INGEST_URL: "http://audit-sidecar:9000/v1/events"
+      AUDIT_INGEST_URL: "http://audit-sidecar:9099/v1/events"
+      # Enforce the egress firewall (fail closed). init-firewall.sh reads the
+      # allowlist from the foreman.toml mounted below (or $EGRESS_ALLOWLIST).
+      DOCBOX_EGRESS_FIREWALL: "1"
     volumes:
+      - ./foreman.toml:/etc/docbox/foreman.toml:ro   # egress allowlist source for init-firewall.sh
       - docbox-user-data:/workspace                  # User-Data plane
       - docbox-vaults:/vaults                         # gocryptfs cipherdirs
       - docbox-pnpm-store:/usr/local/pnpm/store       # shared pnpm store (cache)
       - docbox-uv-store:/opt/uv/cache                 # shared uv store (cache)
-    # No added capabilities: cap_drop:[ALL] from the hardening anchor stands.
-    # (The egress firewall that would have needed NET_ADMIN is not wired; see above.)
+    # The one capability the default-deny egress needs. NET_ADMIN lets the startup
+    # wrapper install the OUTPUT allowlist; it is used once, then privilege is
+    # dropped to `dev` (setpriv, no inherited caps), so the workload holds nothing.
+    # cap_drop:[ALL] + no-new-privileges from the hardening anchor otherwise stand,
+    # and NET_ADMIN is scoped to THIS service alone.
+    cap_add: [NET_ADMIN]
     command:
       - code-server
       - --auth
@@ -254,17 +292,19 @@ services:
   # active segment is set by a privileged init that then drops CAP_LINUX_IMMUTABLE
   # — even a compromised sidecar can append but not truncate or rewrite.
   #
-  # NOTE: the sidecar image (docker/Dockerfile.audit) + audit-hook are M6.
+  # The sidecar image (docker/Dockerfile.audit) builds the audit ingest from the
+  # @docbox/server package and runs its `start:audit` entry.
   # =========================================================================
   audit-sidecar:
     <<: *hardening
     image: ${DOCBOX_REGISTRY:-docbox}/audit-sidecar:${DOCBOX_TAG:-dev}
     build:
       context: ..
-      dockerfile: docker/Dockerfile.audit            # M6 deliverable
+      dockerfile: docker/Dockerfile.audit
     env_file: [.env]
     environment:
-      AUDIT_INGEST_ADDR: "0.0.0.0:9000"              # agent-net ingest only
+      AUDIT_PORT: "9099"                             # ingest bind port (matches the audit-sidecar:9099 refs)
+      AUDIT_LOG_PATH: "/var/lib/docbox/audit/events.jsonl"  # append target on the mounted audit volume below
       AUDIT_ANCHOR_INTERVAL_MIN: "${AUDIT_ANCHOR_INTERVAL_MIN:-60}"
     volumes:
       # Owned by a dedicated audit uid, mounted into NO agent container.
@@ -274,6 +314,12 @@ services:
     networks:
       - agent-net    # ingest interface (write path)
       - audit-net    # storage + read console (never crosses to agents)
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9099/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
 
   # =========================================================================
   # browser-sidecar — confined chrome-devtools for agent browsing. Isolated on
@@ -330,24 +376,35 @@ services:
     image: ${DOCBOX_REGISTRY:-docbox}/vault-sidecar:${DOCBOX_TAG:-dev}
     build:
       context: ..
-      dockerfile: docker/Dockerfile.vault            # M6 deliverable
+      dockerfile: docker/Dockerfile.vault
     profiles: ["vault-fuse"]
     env_file: [.env]
+    environment:
+      # Cipherdir + plaintext mount both live under the docbox-vaults volume. The
+      # passphrase comes from VAULT_PASSFILE (a mounted secret) or VAULT_PASSPHRASE
+      # in .env; the launch script prefers the file. Never hardcode it here.
+      VAULT_CIPHERDIR: "${VAULT_CIPHERDIR:-/vaults/default/cipher}"
+      VAULT_MOUNTPOINT: "${VAULT_MOUNTPOINT:-/vaults/default/plain}"
     # gocryptfs FUSE needs /dev/fuse + SYS_ADMIN + apparmor:unconfined on Ubuntu
-    # — NOT --privileged. Only the fuse engine takes on this surface.
+    # — NOT --privileged. Only the fuse engine takes on this surface, and only
+    # this one sidecar; no agent carries it.
     cap_add: [SYS_ADMIN]
     devices: ["/dev/fuse"]
     security_opt:
       - "no-new-privileges:true"
       - "apparmor:unconfined"
+    # A passphrase from the environment is staged on RAM-backed /tmp, never disk.
+    tmpfs: ["/tmp"]
     volumes:
       - docbox-vaults:/vaults
     networks: [agent-net]
 
 networks:
   # Control-plane + agents + sidecar ingest. A normal bridge (NOT internal):
-  # providers and registries must stay reachable. Egress is not yet restricted
-  # (the init-firewall allowlist is planned, not wired), so outbound is open.
+  # providers and registries must stay reachable. Outbound is not open, though —
+  # the agent applies a default-deny egress firewall at startup (init-firewall.sh)
+  # that permits only the foreman.toml allowlist. The bridge stays routable so
+  # that allowlist can resolve; the per-container OUTPUT rules do the gating.
   agent-net:
     driver: bridge
   # Audit storage isolation. internal:true means nothing here can reach any

@@ -19,6 +19,7 @@ import {
   snapshots, beads, audit, vaults, documents, modules, systemStatus, NOW,
 } from '../../app/src/data/mock.ts';
 import type { ActionEvent, ActionKind } from '../../app/src/domain/types.ts';
+import { getEngine, type IdentityTuple } from './engine/client';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const TOML_PATH = process.env.DOCBOX_TOML ?? join(here, '../../docker/foreman.toml');
@@ -71,6 +72,40 @@ app.post('/api/documents', async (c) => {
 });
 
 app.get('/api/health', (c) => c.json({ status: 'ok', stack: systemStatus.activeStack, ts: NOW }));
+
+// ── Agent engine (PRD-003) ────────────────────────────────────────────────────
+// The control plane drives the agent engine through one seam. By default a
+// deterministic in-process mock answers so the plane works with no `pi` present;
+// DOCBOX_ENGINE=live swaps in the pi RPC driver behind the same routes — the same
+// mock/live pattern as the data adapter.
+function asIdentity(v: unknown): IdentityTuple | undefined {
+  if (!v || typeof v !== 'object') return undefined;
+  const o = v as Record<string, unknown>;
+  if (
+    typeof o.ownerId === 'string' && typeof o.sessionId === 'string' &&
+    typeof o.agentId === 'string' && typeof o.actionId === 'string'
+  ) {
+    return { ownerId: o.ownerId, sessionId: o.sessionId, agentId: o.agentId, actionId: o.actionId };
+  }
+  return undefined;
+}
+
+app.get('/api/engine/health', async (c) => c.json(await getEngine().health()));
+
+app.post('/api/engine/prompt', async (c) => {
+  const body = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const prompt = typeof body.prompt === 'string' ? body.prompt : '';
+  if (!prompt) return c.json({ ok: false, error: 'prompt is required' }, 400);
+  const result = await getEngine().submitPrompt({
+    sessionId: typeof body.sessionId === 'string' ? body.sessionId : `sess-${liveSeq}`,
+    prompt,
+    model: typeof body.model === 'string' ? body.model : undefined,
+    // Identity is accepted from the orchestrator only in structured form; it is
+    // never inferred from prompt text (PRD-003 / PRD-006).
+    identity: asIdentity(body.identity),
+  });
+  return c.json(result);
+});
 
 // ── Configuration as TOML ────────────────────────────────────────────────────
 // The TOML file is the source of truth (ADR-004). If it is not on disk yet,

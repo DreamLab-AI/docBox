@@ -104,10 +104,13 @@ current_live_tag() {
 build_image() {
   local sha="$1"
   log "Phase 2 · build ${REGISTRY}/sandbox:${sha}"
+  # Core images that carry a build: section — agent (sandbox), control-plane and
+  # the audit sidecar. The optional module sidecars (browser, vault) build under
+  # their profiles, not on a core overhaul.
   DOCBOX_TAG="${sha}" docker compose \
     -p "${GREEN_PROJECT}" -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" \
-    build agent control-plane
-  ok "image built and tagged ${sha}"
+    build agent control-plane audit-sidecar
+  ok "images built and tagged ${sha}"
 }
 
 # ---------------------------------------------------------------------------
@@ -141,7 +144,7 @@ verify_green() {
 
   local i
   for ((i = 1; i <= HEALTH_RETRIES; i++)); do
-    if docker exec "${cid}" curl -fsS http://localhost:8788/health >/dev/null 2>&1; then
+    if docker exec "${cid}" curl -fsS http://localhost:8788/api/health >/dev/null 2>&1; then
       ok "healthcheck passed (attempt ${i})"
       break
     fi
@@ -150,9 +153,12 @@ verify_green() {
   done
 
   # Data-compatibility probe: mount the live User-Data volume READ-ONLY into a
-  # one-off container of the NEW image and run its migration/read check.
+  # one-off container of the NEW image and run its migration/read check. This
+  # container has no NET_ADMIN and needs no network, so the egress firewall is
+  # switched off for the probe (it would otherwise fail closed at startup).
   log "Phase 4b · data-compatibility probe (read-only)"
   if docker run --rm \
+      -e DOCBOX_EGRESS_FIREWALL=0 \
       -v "${LIVE_PROJECT}_docbox-user-data:/workspace:ro" \
       "${REGISTRY}/sandbox:${sha}" \
       bash -lc 'test -d /workspace && ls -A /workspace >/dev/null'; then

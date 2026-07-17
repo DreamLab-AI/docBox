@@ -84,8 +84,10 @@ keeps it a tenth of agentbox's surface.
 | **Foreman UI** — eight-tab control plane | Built, verified | `app/` |
 | **Control-plane server** — Hono, serves the world + SSE, TOML config, documents | Built, verified | `server/` |
 | **Companion extension** — code-server sidebar (chat + documents) | Scaffolded, compile-checked | `extension/` |
-| **Container definitions** — Dockerfile, compose, scripts | Written (not built here; DinD) | `docker/`, `scripts/` |
-| Agent engine (pi), identity, tunnels, audit sidecar, vaults | Specified | `docs/`, `corpus/` |
+| **Container definitions** — control-plane / audit / vault / browser images, egress firewall, oauth2-proxy | Written, compose-validated (images build on a host; DinD) | `docker/`, `scripts/` |
+| **Agent engine** — typed seam + deterministic mock; live `pi` over RPC (stdio) | Seam + mock built, tested | `server/src/engine/` |
+| **Audit ingest** — write-only, hash-chained append service | Built, tested (runs as the audit sidecar) | `server/src/audit/` |
+| Identity (Entra + oauth2-proxy), tunnels, vaults, chat bubble | Specified; config written, host-runtime | `docs/`, `docker/` |
 
 Foreman runs against a mock world by default (offline, deterministic) and, with
 `VITE_DATA_MODE=live`, hydrates from the control-plane server instead. The feature modules never
@@ -208,15 +210,18 @@ flowchart LR
   style M2 fill:#0e2b28,stroke:#33c2b4
 ```
 
-M3–M7 have their container definitions written in `docker/` and their designs in `docs/`; they
-turn on as the pieces are wired and built on a real host.
+M3's engine seam and M6's audit service are built and tested behind the adapter pattern
+(`server/src/engine/`, `server/src/audit/`); M4's container definitions and the default-deny egress
+boundary are written and compose-validated. What remains is host-runtime wiring — a live `pi`
+process, the running audit sidecar, real Entra/OIDC and tunnel secrets — which turns on when the
+images are built on a real host.
 
 ## Research corpus
 
 The design rests on a licence-verified survey of the field (checked against the GitHub API or a
 raw LICENSE read on 2026-07-16; several popular projects' badges are wrong). The agent engine is
 **pi (MIT)** rather than the proprietary Claude Code CLI; the work ledger is **beads (MIT)** behind
-a narrow interface; **Gemma 4 is Apache-2.0** so the embedded model is licence-clean. Full detail,
+a narrow interface; the embedded local model is **Qwen3-8B (Apache-2.0)**, so it ships licence-clean. Full detail,
 and the traps found (Open WebUI's custom licence, immudb's BSL, Redis 8's tri-licence, Daytona
 shipping no licence), are indexed in [`corpus/README.md`](corpus/README.md).
 

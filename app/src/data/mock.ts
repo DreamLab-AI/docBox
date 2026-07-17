@@ -153,6 +153,9 @@ export const documents: DocumentInfo[] = [
 ];
 
 // Audit chain derived from the action stream (a subset gets recorded), plus lifecycle events.
+// Seeded demo data only: the hashes are computed in-app for the walkthrough, not read from a
+// real trail. The live write-only, hash-chained audit sidecar arrives at M6 (surfaced as the
+// "DEMO DATA" marker in AuditSection). Do not treat these records as evidential.
 export const audit: AuditRecord[] = (() => {
   const recorded = actions.filter((_, i) => i % 3 === 0);
   let prev = '000000';

@@ -1,0 +1,64 @@
+# syntax=docker/dockerfile:1.7
+#
+# docBox vault-sidecar image — gocryptfs live-FUSE mount provider.
+#
+# Design steer (PRD-000): a distillation, not agentbox. This image holds NO
+# application logic. It is a single-purpose mount provider: it unlocks a
+# gocryptfs cipherdir with a passphrase and keeps the plaintext FUSE mount live
+# in the foreground for as long as the container runs.
+#
+# It backs ONLY the optional `gocryptfs-fuse` vault engine (foreman.toml
+# vaults.engine). The DEFAULT engine (`gocryptfs-unlock`, decrypt-on-unlock)
+# needs no sidecar and no container privilege at all — the control plane runs the
+# unlock job and the agent mounts a plain volume. This sidecar exists only when a
+# client picks the live-FUSE engine, and is guarded behind the `vault-fuse`
+# compose profile so it is absent otherwise.
+#
+# LICENCE: gocryptfs is MIT; it is installed from Debian's apt archive, not
+# vendored. FUSE/util-linux are arm's-length CLIs invoked as subprocesses, the
+# same policy the licence register records for git and pandoc.
+#
+# PRIVILEGE: a FUSE mount needs the mount syscall. The process runs as a non-root
+# user and mounts through the setuid `fusermount` helper; compose grants this ONE
+# sidecar CAP_SYS_ADMIN, the /dev/fuse device and apparmor:unconfined (NOT
+# --privileged) so the mount succeeds inside the container. Those grants are
+# scoped to this service alone — no agent or other sidecar carries them.
+
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    # Defaults a client can override from compose/.env. The cipherdir and its
+    # plaintext mount both live under the docbox-vaults volume mounted at /vaults.
+    VAULT_CIPHERDIR=/vaults/default/cipher \
+    VAULT_MOUNTPOINT=/vaults/default/plain
+
+# gocryptfs (MIT) pulls its FUSE dependency from apt. tini reaps the mount
+# process's children cleanly on shutdown so the FUSE mount is torn down.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      gocryptfs \
+      ca-certificates \
+      tini \
+    && rm -rf /var/lib/apt/lists/* \
+    # Permit -allow_other so the unlocked plaintext is reachable across the
+    # scoped mount propagation compose sets up for the agent.
+    && echo 'user_allow_other' >> /etc/fuse.conf
+
+# Non-root user that owns the vault tree. uid 1003 stays clear of the agent's dev
+# uid (1001) and the audit uid (1002). A fresh docbox-vaults volume inherits this
+# ownership from the mount point created here.
+RUN groupadd --gid 1003 vault \
+    && useradd --uid 1003 --gid 1003 --create-home --shell /usr/sbin/nologin vault \
+    && mkdir -p /vaults \
+    && chown -R vault:vault /vaults
+
+COPY --chown=vault:vault docker/launch-vault.sh /usr/local/bin/launch-vault.sh
+RUN chmod +x /usr/local/bin/launch-vault.sh
+
+LABEL org.opencontainers.image.title="docBox vault-sidecar" \
+      org.opencontainers.image.description="gocryptfs live-FUSE mount provider for the optional gocryptfs-fuse vault engine" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.source="https://example.invalid/docbox"
+
+USER vault
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/launch-vault.sh"]

@@ -1,0 +1,114 @@
+# syntax=docker/dockerfile:1.7
+#
+# docBox audit-sidecar image — the write-only, append-only ingest service.
+#
+# Design steer (PRD-000): a distillation, not agentbox. The audit ingest is a
+# small Node service compiled as part of the @docbox/server package. This image
+# builds that package and runs ONLY the audit entry point as a non-root user. It
+# holds no UI and serves no agent traffic beyond POSTs on the ingest port.
+#
+# CONTRACT with the server package (owned elsewhere in the repo) — the queen
+# reconciles this with the backend-services agent:
+#   * `pnpm --filter @docbox/server build` compiles the audit ingest server into
+#     server/dist (reference entry: server/dist/audit/ingest.js).
+#   * `pnpm --filter @docbox/server start:audit` launches that compiled ingest
+#     server. This image runs THAT script, so the exact entry filename stays with
+#     the package that owns it; the backend agent MUST add `start:audit` to
+#     server/package.json.
+#   * The ingest server binds AUDIT_PORT (default 9099) and appends events to
+#     AUDIT_LOG_PATH; it exposes GET /health for the HEALTHCHECK below.
+#
+# Topology (compose.yaml): dual-homed on agent-net (ingest, write path) and the
+# internal audit-net (storage + read path). No agent is ever attached to
+# audit-net, so the read path is unreachable from any agent. The append-only WORM
+# inode (chattr +a) on the audit volume is set by the service using the scoped
+# CAP_LINUX_IMMUTABLE that compose grants — not by this Dockerfile.
+#
+# THIS REPO DOES NOT BUILD IMAGES IN CI (docker-in-docker with bind mounts is
+# broken in the dev environment). Build on a real host or a Docker-capable CI
+# runner — see docker/README.md.
+
+ARG NODE_IMAGE=node:24-bookworm-slim
+ARG PNPM_VERSION=10.15.0
+
+# ===========================================================================
+# Stage: base — pnpm via corepack, curl for the healthcheck, tini for reaping.
+# ===========================================================================
+FROM ${NODE_IMAGE} AS base
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ARG PNPM_VERSION
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    PNPM_HOME=/usr/local/pnpm \
+    PATH=/usr/local/pnpm:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      tini \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN corepack enable && corepack prepare "pnpm@${PNPM_VERSION}" --activate
+
+# ===========================================================================
+# Stage: build — install the workspace and build the server package (which
+# carries the audit ingest). The app UI is NOT built: the audit sidecar hosts no
+# UI. The server sources are copied whole so the package's workspace-relative
+# imports resolve during the build.
+# ===========================================================================
+FROM base AS build
+
+WORKDIR /app
+
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
+COPY app/package.json app/package.json
+COPY server/package.json server/package.json
+
+RUN --mount=type=cache,target=/root/.cache,uid=0,gid=0 \
+    pnpm install --frozen-lockfile
+
+COPY . .
+
+RUN --mount=type=cache,target=/root/.cache,uid=0,gid=0 \
+    pnpm --filter @docbox/server build
+
+# ===========================================================================
+# Stage: runtime — non-root, dedicated audit uid owns the mount point.
+# ===========================================================================
+FROM base AS runtime
+
+# A dedicated audit user/group. The audit volume mount point is created and owned
+# here so a fresh named volume inherits this ownership on first mount — no agent
+# uid ever owns the audit store.
+RUN groupadd --gid 1002 audit \
+    && useradd --uid 1002 --gid 1002 --create-home --shell /usr/sbin/nologin audit \
+    && mkdir -p /var/lib/docbox/audit \
+    && chown -R audit:audit /var/lib/docbox/audit
+
+WORKDIR /app
+COPY --from=build --chown=audit:audit /app /app
+
+# The ingest reads these exact names (server/src/audit/ingest.ts): AUDIT_PORT for
+# the bind port, AUDIT_LOG_PATH for the append target. AUDIT_LOG_PATH points at the
+# mounted audit volume so events persist there, not in the image layer.
+ENV NODE_ENV=production \
+    AUDIT_PORT=9099 \
+    AUDIT_LOG_PATH=/var/lib/docbox/audit/events.jsonl
+
+LABEL org.opencontainers.image.title="docBox audit-sidecar" \
+      org.opencontainers.image.description="Write-only, append-only audit ingest service (POST /v1/events); dual-homed, read path off-network" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.source="https://example.invalid/docbox"
+
+USER audit
+# Ingest port (agent-net write path). Not published to the host — agents reach it
+# in-network at http://audit-sidecar:9099.
+EXPOSE 9099
+
+HEALTHCHECK --interval=15s --timeout=3s --retries=5 --start-period=15s \
+  CMD curl -fsS http://localhost:9099/health || exit 1
+
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["pnpm", "--filter", "@docbox/server", "start:audit"]

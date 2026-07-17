@@ -1,0 +1,19 @@
+# Build-ignore for docker/Dockerfile.control-plane (BuildKit reads the
+# <dockerfile>.dockerignore adjacent to the Dockerfile). Patterns are relative to
+# the build context root (the repo root). Keep host build state out of the
+# context so `COPY . .` cannot bake stale or wrong-platform artefacts.
+**/node_modules
+**/dist
+**/coverage
+**/.turbo
+.git
+.github
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+.pnpm-store
+.pnpm-cache
+.claude-flow
+.agentic-qe
+.audits-local

@@ -60,10 +60,13 @@ ENV DEBIAN_FRONTEND=noninteractive \
     UV_TOOL_DIR=/opt/uv/tools \
     PATH=/usr/local/pnpm:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin
 
-# System packages: certificates + fetch/VCS tooling only. git is an arm's-length
-# GPL CLI invoked as a subprocess (never linked/vendored) — same policy the
-# licence register records for pandoc. No apt package pinning here: the base is
-# digest-pinned instead, which fixes the whole apt snapshot reproducibly.
+# System packages: certificates + fetch/VCS tooling, plus the egress-firewall
+# toolchain. git/iptables/ipset/util-linux are arm's-length GPL/LGPL CLIs invoked
+# as subprocesses (never linked/vendored) — the same policy the licence register
+# records for pandoc. iptables + ipset back scripts/init-firewall.sh; util-linux
+# provides setpriv, which the entrypoint uses to drop privileges after the
+# firewall is applied. No apt package pinning here: the base is digest-pinned
+# instead, which fixes the whole apt snapshot reproducibly.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
       curl \
@@ -73,6 +76,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       xz-utils \
       unzip \
       tini \
+      iptables \
+      ipset \
+      util-linux \
     && rm -rf /var/lib/apt/lists/*
 
 # pnpm via corepack (bundled with Node ≥16). Pinned for reproducibility.
@@ -230,6 +236,17 @@ RUN --mount=type=cache,target=/root/.cache,uid=0,gid=0 \
     esac
 
 # ---------------------------------------------------------------------------
+# Egress boundary — the default-deny firewall and the startup wrapper that
+# applies it. init-firewall.sh installs an iptables/ipset OUTPUT allowlist from
+# foreman.toml (mounted at /etc/docbox/foreman.toml) or $EGRESS_ALLOWLIST. The
+# wrapper runs it as root with the scoped CAP_NET_ADMIN the compose `agent`
+# service grants, then drops to the unprivileged `dev` user for the workload.
+# ---------------------------------------------------------------------------
+COPY scripts/init-firewall.sh /usr/local/sbin/init-firewall.sh
+COPY docker/docbox-entrypoint.sh /usr/local/bin/docbox-entrypoint.sh
+RUN chmod 0755 /usr/local/sbin/init-firewall.sh /usr/local/bin/docbox-entrypoint.sh
+
+# ---------------------------------------------------------------------------
 # Runtime posture.
 # ---------------------------------------------------------------------------
 LABEL org.opencontainers.image.title="docBox sandbox" \
@@ -238,9 +255,16 @@ LABEL org.opencontainers.image.title="docBox sandbox" \
       org.opencontainers.image.source="https://example.invalid/docbox"
 
 WORKDIR /workspace
-USER dev
+
+# Secure-by-default: the egress firewall is ON unless a caller sets
+# DOCBOX_EGRESS_FIREWALL=0 (e.g. the network-free data-compatibility probe in
+# scripts/rebuild.sh). The entrypoint applies it as root then drops to `dev`, so
+# there is NO `USER dev` here — privilege is dropped at runtime by setpriv, not
+# baked into the image, which is what lets the one capability be used then shed.
+ENV DOCBOX_EGRESS_FIREWALL=1
 
 # tini reaps zombies from agent subprocesses (pi spawns child processes / tools).
-ENTRYPOINT ["/usr/bin/tini", "--"]
+# The wrapper applies the firewall, drops privileges, then execs the command.
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/docbox-entrypoint.sh"]
 # Neutral default; every compose service overrides `command` with its real role.
 CMD ["bash"]
