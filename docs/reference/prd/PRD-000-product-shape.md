@@ -40,6 +40,7 @@ flowchart LR
   classDef active fill:#2b2410,stroke:#f0a53a;
   class M1 done;
   class M2 done;
+  class M3,M4,M5,M6 active;
 ```
 
 Status legend: **Done** shipped and judged · **In progress** being specified or built now ·
@@ -49,11 +50,16 @@ Status legend: **Done** shipped and judged · **In progress** being specified or
 |---|---|---|---|
 | **M1** | Foreman UI, mock-backed, judged before containerising | Done | PRD-001, ADR-001/002/003 |
 | **M2** | Hono control-plane server; adapter swaps mock for HTTP/SSE | Done | PRD-002, ADR-004/005, corpus/11 |
-| **M3** | pi embedded via RPC/SDK; audit + identity injection through its hooks | Planned | PRD-003, corpus/12 |
-| **M4** | Multi-stage Dockerfile; three-planes snapshot/rollback; blue/green | Planned | PRD-004, ADR-006, DDD-002, corpus/10, corpus/13 |
-| **M5** | Entra SSO via oauth2-proxy; cloudflared + Access; loopback-only | Planned | PRD-005, corpus/05, corpus/06 |
-| **M6** | Write-only audit sidecar; hash chain + anchors; gocryptfs vaults | Planned | PRD-006, corpus/09, corpus/05 |
+| **M3** | pi embedded via RPC/SDK; audit + identity injection through its hooks | In progress | PRD-003, corpus/12 |
+| **M4** | Multi-stage Dockerfile; three-planes snapshot/rollback; blue/green | In progress | PRD-004, ADR-006, DDD-002, corpus/10, corpus/13 |
+| **M5** | Entra SSO via oauth2-proxy; cloudflared + Access; loopback-only | In progress | PRD-005, corpus/05, corpus/06 |
+| **M6** | Write-only audit sidecar; hash chain + anchors; gocryptfs vaults | In progress | PRD-006, corpus/09, corpus/05 |
 | **M7** | deep-chat bubble in the client dashboard → pi over the control plane | Planned | corpus/11 |
+
+M3–M6 are in progress: their seams are built and tested (`server/src/engine/`, `server/src/audit/`)
+or their container definitions written and compose-validated; what remains is host-runtime wiring —
+a live `pi` process, real Entra/OIDC and tunnel secrets, and the image builds. M7 is not started:
+the client dashboard is unseen.
 
 ## Feature areas and their homes
 
