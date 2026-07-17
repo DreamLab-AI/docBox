@@ -6,6 +6,12 @@ This is the map of what the product is and the order we expect to build it. It s
 per-surface PRDs and points at the research corpus that justifies each choice. Treat the future
 milestones as scaffolding: shaped enough to plan against, not yet specified.
 
+**Branches (2026-07-17).** `main` now carries a defined application — a showcase for NHS clinicians
+(the [demonstrator brief](../../demonstrator-brief.md), and PRD-008–011, ADR-011–014, DDD-004).
+`vanilla` keeps the generic sandbox described here as a reusable baseline. The product shape and the
+spine below are common to both; the demonstrator is an application built on the spine, not a fork of
+it.
+
 ## What we are building
 
 A self-contained dev sandbox for a client team. A primary user sees a chat bubble in their own
@@ -60,6 +66,35 @@ M3–M6 are in progress: their seams are built and tested (`server/src/engine/`,
 or their container definitions written and compose-validated; what remains is host-runtime wiring —
 a live `pi` process, real Entra/OIDC and tunnel secrets, and the image builds. M7 is not started:
 the client dashboard is unseen.
+
+## Defined application on `main`: the clinician demonstrator
+
+`main` aims the spine at a first real use case: a showcase for NHS doctors of what an agent harness
+can do with a patient's records. One synthetic patient's mixed-format documents ingest through the
+existing routed OCR, an agent layer grounds them into a typed, evidence-linked record, and a bounded
+mesh of specialist agents answers a clinician's questions with sentence-level citations. It is a
+demonstrator — not for clinical use, on wholly synthetic data — and the honest framing is
+[PRD-008](./PRD-008-clinician-demonstrator.md)'s.
+
+The demonstrator is additive: it consumes the M1–M6 spine (audit, identity, egress proof, OCR
+routing, panels, the engine seam) and adds capabilities, each with its own record.
+
+| Document | Adds |
+|---|---|
+| [PRD-008](./PRD-008-clinician-demonstrator.md) | The demonstrator: audience, guided narrative, framing |
+| [PRD-009](./PRD-009-synthetic-patient-corpus.md) | The synthetic one-patient corpus, with seeded contradictions |
+| [PRD-010](./PRD-010-clinical-grounding-pipeline.md) | Ingestion: OCR → NER → Claims → LongitudinalRecord |
+| [PRD-011](./PRD-011-clinician-query-and-reading-mesh.md) | The specialist reading mesh and cited answers |
+| [ADR-011](../adr/ADR-011-context-native-retrieval.md) | Reject the vector-RAG backbone; read the record in context |
+| [ADR-012](../adr/ADR-012-clinical-grounding-stack.md) | OpenMed + medspaCy grounding stack (permissive) |
+| [ADR-013](../adr/ADR-013-fhir-record-and-terminology-mount.md) | FHIR record; terminology as a mount, not a bundle |
+| [ADR-014](../adr/ADR-014-corpus-store-lexical-index-and-graph.md) | SQLite FTS5 store; typed, non-embedded entity graph |
+| [DDD-004](../ddd/DDD-004-clinical-corpus-domain.md) | The clinical corpus bounded context |
+
+The organising choice is that retrieval is context-native: for one patient the record nearly fits
+the mesh's context, so the design reads and reconciles on recency and validity rather than embedding
+similarity ([ADR-011](../adr/ADR-011-context-native-retrieval.md)). This is a documentation phase;
+the running demonstrator is the next build, on the spine above.
 
 ## Feature areas and their homes
 

@@ -16,6 +16,21 @@ Two rules shape every decision, both from the client:
   bundles. The maximalist in-house machine (agentbox) stays in-house.
 - **Maintainability beats capability.** Fewest tools, one per job, narrow interfaces we own.
 
+## What `main` is aimed at: a clinician demonstrator
+
+`main` now has a defined use case: a showcase for NHS doctors of what an agent harness can do with a
+patient's records. One synthetic patient's mixed documents — letters, lab reports, a discharge
+summary, an e-consult email, a few scanned handwritten pages — ingest through the box's OCR; an
+agent layer grounds them into a typed, evidence-linked record; and a bounded mesh of specialist
+agents answers a clinician's questions with a citation behind every sentence. It rejects
+vector-similarity retrieval in favour of reading the record in context — for one patient the whole
+record nearly fits. It is a demonstrator, not for clinical use, on wholly synthetic data.
+
+This is specified, not yet built: the [demonstrator brief](docs/demonstrator-brief.md) and its
+PRD/ADR/DDD set (start at [PRD-008](docs/reference/prd/PRD-008-clinician-demonstrator.md)) are the
+plan; the running demonstrator is the next build on the spine described below. The `vanilla` branch
+keeps the generic sandbox without this use case.
+
 ## System shape
 
 ```mermaid
