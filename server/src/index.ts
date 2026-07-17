@@ -20,6 +20,7 @@ import {
 } from '../../app/src/data/mock.ts';
 import type { ActionEvent, ActionKind } from '../../app/src/domain/types.ts';
 import { getEngine, type IdentityTuple } from './engine/client';
+import { getAuditEmitter, identityFromHeaders, tupleFor, auditEvent } from './audit/emit';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const TOML_PATH = process.env.DOCBOX_TOML ?? join(here, '../../docker/foreman.toml');
@@ -68,6 +69,10 @@ app.post('/api/documents', async (c) => {
     handwriting: Boolean(body.handwriting),
   };
   documents.unshift(doc);
+  const uploader = identityFromHeaders((n) => c.req.header(n));
+  await getAuditEmitter().emit(auditEvent('document_upload',
+    tupleFor(uploader, { sessionId: 'control-plane', agentId: 'foreman', actionId: doc.id }),
+    { name: doc.name, project: doc.project, route: doc.ocrRoute }));
   return c.json({ ok: true, document: doc });
 });
 
@@ -96,14 +101,19 @@ app.post('/api/engine/prompt', async (c) => {
   const body = await c.req.json().catch(() => ({} as Record<string, unknown>));
   const prompt = typeof body.prompt === 'string' ? body.prompt : '';
   if (!prompt) return c.json({ ok: false, error: 'prompt is required' }, 400);
+  const sessionId = typeof body.sessionId === 'string' ? body.sessionId : `sess-${liveSeq}`;
+  // Identity is accepted from the orchestrator in structured form (never inferred
+  // from prompt text); a user-initiated prompt is attributed from the auth headers.
+  const owner = identityFromHeaders((n) => c.req.header(n));
+  const identity = asIdentity(body.identity)
+    ?? tupleFor(owner, { sessionId, agentId: 'foreman', actionId: `prompt-${sessionId}` });
   const result = await getEngine().submitPrompt({
-    sessionId: typeof body.sessionId === 'string' ? body.sessionId : `sess-${liveSeq}`,
-    prompt,
+    sessionId, prompt,
     model: typeof body.model === 'string' ? body.model : undefined,
-    // Identity is accepted from the orchestrator only in structured form; it is
-    // never inferred from prompt text (PRD-003 / PRD-006).
-    identity: asIdentity(body.identity),
+    identity,
   });
+  await getAuditEmitter().emit(auditEvent('prompt', identity,
+    { sessionId, ok: result.ok, chars: result.text.length }));
   return c.json(result);
 });
 
@@ -134,10 +144,15 @@ app.put('/api/config', async (c) => {
   }
   // In this milestone the write is gated: live/session changes could persist,
   // but a rebuild-class change must go through the overhaul flow, not a raw write.
-  if (process.env.DOCBOX_CONFIG_WRITABLE === '1') {
-    writeFileSync(TOML_PATH, body, 'utf8');
-    return c.json({ ok: true, persisted: TOML_PATH });
-  }
+  const persisted = process.env.DOCBOX_CONFIG_WRITABLE === '1';
+  if (persisted) writeFileSync(TOML_PATH, body, 'utf8');
+  // A config change is auditable whether or not it persisted in this milestone —
+  // the intent and the actor are recorded either way.
+  const owner = identityFromHeaders((n) => c.req.header(n));
+  await getAuditEmitter().emit(auditEvent('config_write',
+    tupleFor(owner, { sessionId: 'control-plane', agentId: 'foreman', actionId: 'config' }),
+    { persisted, bytes: body.length }));
+  if (persisted) return c.json({ ok: true, persisted: TOML_PATH });
   return c.json({ ok: true, persisted: false, note: 'read-only in this milestone; set DOCBOX_CONFIG_WRITABLE=1 to persist' });
 });
 
