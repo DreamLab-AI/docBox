@@ -2,6 +2,10 @@
 .agentic-qe/
 .claude-flow/
 
+# Local-only audit/gap-analysis records — kept on disk, never committed.
+# The design record that ships is docs/reference/ (PRD/ADR/DDD); audits are transient.
+.audits-local/
+
 # Dependencies
 node_modules/
 

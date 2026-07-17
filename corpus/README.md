@@ -9,7 +9,9 @@
 
 Licence-verified survey behind the design. Every claim was checked against the GitHub API or a raw
 LICENSE read on **2026-07-16**. Permissive licences only (MIT / Apache-2.0 / BSD) for anything
-shipped; each file flags the traps.
+shipped — with one later, deliberate exception this survey predates: the optional browser-sidecar
+module's Google Chrome (proprietary), for a structurally undetectable browser (see the top-level
+[`README.md`](../README.md)). Each file flags the traps.
 
 | Section | Contents |
 |---|---|

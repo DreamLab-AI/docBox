@@ -11,7 +11,9 @@ milestones as scaffolding: shaped enough to plan against, not yet specified.
 A self-contained dev sandbox for a client team. A primary user sees a chat bubble in their own
 dashboard and hands the agent problems bigger than their interface. An admin runs the box through
 **Foreman**, the control plane. The agent layer does CTO-scale overhauls of the sandbox itself,
-bracketed by snapshots and rollback. Everything shipped is permissively licensed.
+bracketed by snapshots and rollback. Everything in the default box is permissively licensed, with
+one deliberate exception: the optional browser-sidecar module ships Google Chrome (proprietary) for
+a structurally undetectable agent browser (an operator-level decision — see `docker/Dockerfile.browser`).
 
 Two governing rules, from the client steers:
 

@@ -11,7 +11,7 @@ request.
 | `app/` | Foreman, the control-plane UI — Vite + React + TypeScript |
 | `server/` | Hono backend (adapters that replace the app's mock seam) |
 | `docker/` | Container definitions for the sandbox |
-| `docs/` | Vision brief, gap analysis, and the reference corpus (PRD / ADR / DDD) |
+| `docs/` | Vision brief, client questions, and the reference record (`reference/` — PRD / ADR / DDD) |
 | `corpus/` | The licence-verified research survey (13 sections) |
 | `data/` | Machine-readable option datasets |
 
@@ -52,6 +52,12 @@ If the result is anything other than a permissive SPDX id (or the field is empty
 project ships no licence at all), do not add it — flag it in your pull request and raise it for
 discussion. The `corpus/` survey records the traps already found (custom licences, BSL, tri-licence
 schemes, missing licences) — check there first.
+
+There is **one standing, operator-approved exception**: the optional browser-sidecar module ships
+**Google Chrome** (proprietary), because a real headful Chrome is what makes the sidecar
+structurally undetectable — a headless/permissive image is not. It is opt-in (the `browser` compose
+profile) and documented in `docker/Dockerfile.browser`. This exception does not license new
+proprietary dependencies elsewhere: anything else still meets the permissive bar above.
 
 ### 2. Prose discipline — plain UK English
 

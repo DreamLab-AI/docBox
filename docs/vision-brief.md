@@ -39,8 +39,9 @@ A self-contained Docker (or similar) system:
    operation; cloud providers layered on via admin provisioning.
 7. **Traceability** — hierarchical, **user-ID-seeded** recording of agent actions across time.
    Working design instinct: a **write-only logging sidecar** the agents can emit to but not
-   read or alter. The chromium-devtools browser sidecar pattern (VNC-observable, data-access
-   confined) is attractive as an observation surface.
+   read or alter. The chrome-devtools-mcp browser sidecar pattern (VNC-observable, data-access
+   confined) is attractive as an observation surface. As shipped this is real headful Google Chrome
+   (not headless chromium), for a structurally undetectable browser.
 8. **Snapshots + rollback** — agentic overhauls of container internals must be bracketed by
    snapshots with one-click rollback, exposed in the admin plane.
 9. **Encrypted-at-rest, portable, per-project filesystem** — likely a sidecar owning per-project
@@ -59,7 +60,7 @@ A self-contained Docker (or similar) system:
 | `agentbox.toml` five-slot adapter pattern | Direct precedent for the config system |
 | Loopback + Tailscale + CF Tunnel strata | Direct precedent for network exposure |
 | ruflo / ruvector orchestration + memory | Embed; **audit our own licence position before shipping** |
-| chromium-devtools + VNC browser sidecar | Precedent for confined, observable sidecars |
+| chrome-devtools-mcp + VNC browser sidecar (real headful Chrome) | Precedent for confined, observable sidecars |
 | Nostr / Solid stack | Blocked on AGPL — permissive replacements under research |
 | Agentic QE fleet, LaTeX reporting, search/design skills | Embed behind the scenes; packaging TBD |
 
@@ -75,7 +76,9 @@ A self-contained Docker (or similar) system:
   proprietary CLI (user steer 2026-07-16; research in corpus/12-agent-harness/).
 - Toolchain requirement: TS dashboard build/test tools, multiple Python versions with venvs +
   Jupyter, and the in-house LaTeX/report loadout — spec in corpus/13-toolchain/.
-- Permissive licences in everything shipped.
+- Permissive licences in everything shipped, with one deliberate, opt-in exception: the
+  browser-sidecar module's Google Chrome (proprietary), chosen for a structurally undetectable
+  agent browser.
 - Primary users never see the machinery — one chat bubble, one URL.
 - Admin sees one control plane — provisioning, users, snapshots, rollback, unlock.
 - Every agent action attributable to a human identity, months later.

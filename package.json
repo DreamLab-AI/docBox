@@ -13,6 +13,6 @@
     "start": "pnpm --filter @docbox/server start"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   }
 }

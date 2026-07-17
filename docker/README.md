@@ -13,6 +13,8 @@ CI runner**.
 | `Dockerfile` | Multi-stage sandbox image: Node 24 + pnpm base, three ARG-gated toolchain bundles, pi engine + code-server, non-root. |
 | `compose.yaml` | The stack, two-network topology, three-plane volumes, loopback-only host ports. |
 | `compose.tunnel.yaml` | Optional overlay adding the cloudflared tunnel (zero inbound ports). |
+| `Dockerfile.browser` | Optional browser-sidecar image: **real headful Google Chrome** + GPU (Vulkan/ANGLE/WebGPU), Xvfb, x11vnc, chrome-devtools-mcp. Structurally undetectable (not headless). Chrome is proprietary — the one deliberate exception to the permissive-only rule. Builds only under the `browser` compose profile. |
+| `launch-browser.sh` | Entry point for the browser sidecar: starts Xvfb (`:2`), x11vnc (`:5903`), and Chrome headful with the GPU + remote-debugging (CDP) flags. |
 | `foreman.toml` | Canonical config manifest; Foreman's Configuration tab is a typed editor over these keys. |
 | `.env.example` | Every environment variable the stack reads. Copy to `.env`. |
 | `../scripts/rebuild.sh` | Blue/green overhaul: snapshot → build → GREEN → verify → cut over / auto-rollback. |
@@ -53,10 +55,16 @@ docker compose build          # builds the agent/sandbox image only (see note be
 docker compose up -d          # base stack: control-plane, agent, audit, sidecars
 ```
 
-Only the main `Dockerfile` (the agent/sandbox image) builds today. The compose file also
-references `Dockerfile.control-plane` (M2), `Dockerfile.audit` and `Dockerfile.vault` (M6); those
-files do not exist yet, so `docker compose build` builds only the sandbox image until those
-milestones land.
+The main `Dockerfile` (the agent/sandbox image) builds by default, and `Dockerfile.browser` builds
+under the `browser` compose profile (`docker compose --profile browser build`). The compose file
+also references `Dockerfile.control-plane` (M2), `Dockerfile.audit` and `Dockerfile.vault` (M6);
+those files do not exist yet, so a plain `docker compose build` builds only the sandbox image until
+those milestones land.
+
+> **Licence note.** The `browser` profile pulls **Google Chrome** (proprietary) at build time — the
+> single deliberate exception to docBox's permissive-only rule. Real headful Chrome is what makes the
+> sidecar structurally undetectable; a headless or permissive image is not. The exception is opt-in
+> (no `browser` profile → no Chrome) and is documented in the header of `Dockerfile.browser`.
 
 Egress is not yet restricted. `scripts/init-firewall.sh` is written but is not installed into the
 image or invoked at startup, so there is no working `init-firewall` step to run after `up` yet; it

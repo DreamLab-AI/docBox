@@ -3,8 +3,10 @@
 A self-contained dev sandbox for a client team. A primary user sees a chat bubble in their own
 dashboard and hands the agent problems bigger than their interface. An admin runs the box through
 **Foreman**, the web control plane in this repo. The agent layer makes large, structural changes
-to the sandbox itself, each one bracketed by a snapshot it can roll back. Everything shipped is
-permissively licensed.
+to the sandbox itself, each one bracketed by a snapshot it can roll back. Everything in the default
+box is permissively licensed; the one exception is opt-in — enabling the browser-sidecar module
+pulls Google Chrome (proprietary), a deliberate choice for a structurally undetectable agent
+browser.
 
 This README is the map: what the product is, what is built, and where each piece lives.
 
@@ -54,10 +56,10 @@ flowchart TB
     c2[identity · audit · config · snapshot]
   end
   subgraph surfaces["Surfaces — how people and agents interact"]
-    s1[Foreman web] --- s2[code-server] --- s3[companion extension] --- s4["streamed desktop (candidate)"]
+    s1[Foreman web] --- s2[code-server] --- s3[companion extension] --- s4[chat bubble] --- s5["streamed desktop (candidate)"]
   end
   subgraph modules["Modules — optional capabilities, gated"]
-    m1[local model] --- m2[local OCR] --- m3[browser sidecar] --- m4[vaults] --- m5[ledger] --- m6[tunnel]
+    m1[local model] --- m2[local OCR] --- m3[browser sidecar] --- m4[vaults] --- m5[ledger] --- m6[tunnel] --- m7[QE fleet]
   end
   surfaces -->|route through| core
   modules -->|gated by config + compose profile| core

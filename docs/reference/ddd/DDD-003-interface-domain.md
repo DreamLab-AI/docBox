@@ -20,7 +20,7 @@ it a small domain of its own, with its own language and invariants. This models 
 
 ```mermaid
 flowchart TB
-  human([Human]) -->|chat: "make the visualiser bigger"| agent[Agent]
+  human([Human]) -->|"chat: 'make the visualiser bigger'"| agent[Agent]
   agent -->|edits| manifest[Layout manifest]
   agent -->|edits| source[Panel source]
   manifest --> shell[Shell reads manifest]
