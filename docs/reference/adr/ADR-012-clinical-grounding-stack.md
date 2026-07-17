@@ -10,6 +10,11 @@ which named-entity recognition and assertion stack, under the permissive-licence
 ([PRD-000](../prd/PRD-000-product-shape.md): MIT/Apache-2.0/BSD plus explicitly open government
 licences, no new proprietary exception)?
 
+On `main` that rule is relaxed — the demonstrator is a one-shot, non-redistributed showcase, so a
+restrictively-licensed stack is allowed on merit ([demonstrator brief](../../demonstrator-brief.md),
+"Licence posture"). The default below is chosen to be permissive and light regardless, so `vanilla`
+runs it unchanged and `main` reaches past it only where accuracy warrants.
+
 The stack must: recognise diseases, drugs and chemicals, anatomy and oncology-specific entities in
 English clinical prose; determine assertion status, because "no chest pain" must not become a
 chest-pain Claim and a drug listed under *Allergies* is not a drug under *Current medication*;
@@ -47,9 +52,11 @@ TypeScript control plane.**
 [ADR-009](./ADR-009-slim-core-surfaces-as-modules.md) shape — a compose service, a `foreman.toml`
 gate, a reach to the core over its API — using the Hugging Face transformers token-classification
 pipeline (`aggregation_strategy="simple"`) or ONNX Runtime. BERT-class fp16 footprints are small
-(184M ≈ 370 MB, 434M ≈ 870 MB), so the whole stack fits on CPU or a sub-2 GB GPU slice and
-**gpt-oss keeps the GPU**. Latency of tens to hundreds of milliseconds per model per page is
-immaterial at ingestion time.
+(184M ≈ 370 MB, 434M ≈ 870 MB). On the target DGX Spark (128 GB unified memory,
+[ADR-015](./ADR-015-target-platform-dgx-spark.md)) the NER checkpoints, gpt-oss and the OCR model
+co-reside without contention, so no CPU-pinning trade-off is needed; on a memory-constrained host the
+same small footprints still fit a sub-2 GB GPU slice beside gpt-oss. The sidecar builds for ARM64.
+Latency of tens to hundreds of milliseconds per model per page is immaterial at ingestion time.
 
 Entity linking is deliberately outside this ADR: OpenMed is NER-only (its roadmap places concept
 linking after Q1 2026; it is not implemented), and coding against SNOMED/UMLS/dm+d is settled by
@@ -76,9 +83,12 @@ the terminology-mount decision in [ADR-013](./ADR-013-fhir-record-and-terminolog
 - **scispaCy** (AllenAI, Apache-2.0) — ships the UMLS/MeSH/RxNorm/HPO EntityLinker that OpenMed
   lacks, but with lower NER accuracy. Not adopted as first-line NER; retained as the candidate
   *linker* for a site that mounts UMLS under its own licence (ADR-013).
-- **John Snow Labs Spark NLP for Healthcare** — the strongest commercial clinical NLP stack, and
-  **rejected on licence**: a commercial EULA with CC-BY-NC-ND model weights breaches the
-  permissive-only rule. Not a trade-off to weigh; a hard exclusion under PRD-000's licence posture.
+- **John Snow Labs Spark NLP for Healthcare** — the strongest commercial clinical NLP stack. Under
+  the permissive-only rule (`vanilla`) it is excluded: a commercial EULA with CC-BY-NC-ND weights.
+  Under `main`'s relaxed rule it is **available on merit** — it needs a John Snow Labs licence key
+  and its weights stay on the demo box, out of this public repo. It is not the default: OpenMed is
+  lighter, fully open, and already covers the corpus's entity families, so JSL is a reach-for option
+  when a demo needs an entity type or an accuracy the open stack misses, not a baseline dependency.
 - **Stanza biomedical (Apache-2.0), HunFlair2/Flair (MIT), BioBERT derivatives** — permissive and
   viable, but without OpenMed's reported accuracy or its per-family checkpoint granularity. They
   form the swap list that the bus-factor mitigation depends on.
@@ -88,8 +98,9 @@ the terminology-mount decision in [ADR-013](./ADR-013-fhir-record-and-terminolog
 - A new module: the NER sidecar joins OCR and the browser sidecar as the third Python/native
   service behind the control plane, under ADR-009's unchanged module rules (compose profile, config
   gate, apply-class, manifest entry).
-- The grounding stack is wholly Apache-2.0/MIT; the licence table in the
-  [demonstrator brief](../../demonstrator-brief.md) holds without exception.
+- The default grounding stack is wholly Apache-2.0/MIT, so `vanilla` runs it unchanged and the
+  brief's permissive floor holds; `main` may add a restrictively-licensed component (John Snow Labs,
+  a larger model) on merit under its relaxed rule.
 - Assertion handling is deterministic rules layered over statistical NER, which keeps the
   audit-trail story concrete: every suppressed or negated entity is attributable to a named rule.
 - The entities this stack emits are the raw material for the Claims of PRD-010 and the nodes of the

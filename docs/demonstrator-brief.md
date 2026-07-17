@@ -77,6 +77,20 @@ Four moving parts, each grounded in the research digests held in RuVector `proje
    others. It answers by reconciling Claims on **recency and validity**, not vector similarity, and
    returns a **CitedAnswer** whose every sentence is anchored to source evidence.
 
+### Target platform: NVIDIA DGX Spark
+
+`main`'s demonstrator targets an **NVIDIA DGX Spark** — a single desktop appliance with a GB10 Grace
+Blackwell superchip, 128 GB of unified CPU/GPU memory, and FP4 acceleration
+([ADR-015](reference/adr/ADR-015-target-platform-dgx-spark.md)). Two things follow. The unified
+memory holds the whole local stack at once — gpt-oss for the agents, the OpenMed NER checkpoints, and
+a vision model for OCR all co-resident — so there is no need to pin models to CPU to spare GPU
+memory, and the local route can run a larger, more accurate OCR model than a memory-constrained box
+allows. The appliance is ARM64, so the container images and the Python sidecar build for aarch64. A
+single self-contained box also matches the demonstrator's whole posture — loopback-only, zero
+inbound, everything the demo needs on one machine — which is the strongest backing for the "your data
+never leaves the box" message the NHS audience is there to test. `vanilla` stays platform-agnostic;
+this target is `main`'s.
+
 ### Why no vector RAG
 
 The operator's position, backed by the retrieval research: for a single-patient corpus the whole
@@ -119,24 +133,44 @@ model; this table is the binding reference so the writers do not diverge.
 
 ## Licence posture
 
-The whole pivot stays inside the permissive rule (MIT/Apache-2.0/BSD, plus explicitly open
-government/data licences), with **no new proprietary exception** beyond the browser sidecar's Chrome
-that PRD-000 already records:
+**`main` relaxes the permissive-only rule; `vanilla` keeps it.** The demonstrator on `main` is a
+one-shot, non-commercial showcase, not a distributed product, so it is not bound by the "everything
+shipped is MIT/Apache-2.0/BSD" rule that defines `vanilla`. `main` may use whatever makes the best
+demonstrator — including restrictively-licensed clinical terminology (SNOMED CT UK, UMLS, ICD-10)
+and commercial clinical NLP (John Snow Labs Healthcare) — each under its own free-to-use terms. Two
+engineering caveats survive the relaxation, as good practice rather than licence philosophy:
 
-- **Grounding models** — OpenMed (Apache-2.0), medspaCy (permissive), GLiNER-biomed (Apache-2.0).
-  John Snow Labs Spark NLP for Healthcare is **rejected** on licence (commercial EULA / non-commercial
-  model weights).
+- **The public repo stays clean.** docBox is a public repository. Restricted terminology files and
+  proprietary model weights go on the demo box at build or run time, never committed here —
+  committing them would be redistribution to the world, which the demo framing does not cure.
+- **Free-to-use still means obtaining the licence.** SNOMED CT UK needs a TRUD account and Affiliate
+  acceptance; UMLS needs a UTS account; John Snow Labs Healthcare needs a licence key. Each is free
+  for this use, but a step the build performs, not an assumption.
+
+The permissive stack below stays the **default and the zero-setup floor** — the demonstrator is
+fully working with nothing but it, and it is `vanilla`'s defining constraint. `main` reaches past it
+only where a richer component sharpens the demo.
+
+- **Grounding models** — the default is OpenMed (Apache-2.0), medspaCy (permissive), GLiNER-biomed
+  (Apache-2.0). John Snow Labs Spark NLP for Healthcare, previously ruled out on licence, is
+  available to `main` on merit (needs a JSL key; its weights are CC-BY-NC-ND) —
+  [ADR-012](reference/adr/ADR-012-clinical-grounding-stack.md).
+- **OCR** — the default local route is Qwen-VL; on `main` a Pixtral-class Mistral vision model may
+  serve as a larger, more accurate local OCR route, its weights held on the box under Mistral's
+  terms. Cloud OCR routes are unchanged (PRD-007).
 - **FHIR** — specification is CC0; the Medplum TypeScript SDK is Apache-2.0.
 - **Lexical index** — SQLite FTS5 is public domain.
-- **Corpus** — Synthea (Apache-2.0), PRSB templates (OGL v3.0), handwriting synthesis (MIT); MIMIC
-  (credentialed DUA) and IAM (non-commercial) are **excluded**.
-- **Terminology is a mount, not a bundle.** OpenMed does NER only; the linking targets are
-  restricted — SNOMED CT and UMLS are redistribution-restricted (TRUD/Affiliate, NLM), ICD-10 is
-  WHO-licensed. Only **dm+d (OGL)** is safe to embed. So the demonstrator ships NER plus code-free
-  canonicalisation plus permissive vocabularies, and exposes a **user-supplied TRUD mount** for a
-  site to bring its own SNOMED/UMLS release. The container never redistributes restricted
-  terminology. This mirrors the existing per-feature local/cloud switch: terminology residency
-  becomes an operator decision, and the mount event is auditable.
+- **Corpus** — Synthea (Apache-2.0), PRSB templates (OGL v3.0), handwriting synthesis (MIT). The
+  corpus we author stays permissive so it remains freely publishable; MIMIC (credentialed DUA) and
+  IAM (non-commercial) are still excluded from it.
+- **Terminology.** OpenMed does NER only, so coding comes from this layer. The zero-setup floor is
+  dm+d (OGL) plus code-free canonicalisation, with a **user-supplied mount** for a site's own
+  SNOMED/UMLS — that floor is `vanilla`'s only path and `main`'s default. Because `main` is not
+  redistributed, it may also **embed SNOMED CT / UMLS / ICD-10 directly on the box** under the
+  free-to-use terms above, coding the record fully. Either way the terminology is read through an
+  anticorruption layer and the choice is an audited, operator-owned decision — the same shape as the
+  local/cloud switch. [ADR-013](reference/adr/ADR-013-fhir-record-and-terminology-mount.md) records
+  this.
 
 ## Governance framing (synthetic showcase)
 
@@ -163,9 +197,10 @@ existing series without reuse.
 | **PRD-010** Clinical grounding pipeline | Ingestion: OCR → NER → schema-guided extraction → Claims → LongitudinalRecord; evidence spans; temporal validity; contradiction detection. |
 | **PRD-011** Clinician query & reading mesh | The bounded specialist mesh, the query surface/panel, the CitedAnswer contract, honest limits. |
 | **ADR-011** Context-native retrieval | Reject the vector-RAG/embedding backbone; adopt ingestion-time grounding + context-native mesh reading + deterministic tools. Honest trade-offs and the token-economics boundary. |
-| **ADR-012** Clinical grounding stack | OpenMed + medspaCy + GLiNER; reject John Snow Labs on licence; the Python NER sidecar behind the TypeScript control plane. |
-| **ADR-013** FHIR record + terminology mount | FHIR R4 as the internal longitudinal representation; Medplum TS SDK; dm+d embedded, SNOMED/UMLS via user mount; the evidence-plus-validity Claim model. |
+| **ADR-012** Clinical grounding stack | OpenMed + medspaCy + GLiNER by default; John Snow Labs available to `main` on merit (needs a key); the Python NER sidecar behind the TypeScript control plane. |
+| **ADR-013** FHIR record + terminology | FHIR R4 internal representation; Medplum TS SDK; dm+d floor with a user mount, and (on `main`) SNOMED/UMLS embedded on the box; the evidence-plus-validity Claim model. |
 | **ADR-014** Corpus store, lexical index & entity graph | SQLite FTS5 (BM25) as the deterministic lexical tool; the per-document tree and the typed, non-embedded entity graph as the mesh's shared workspace; where the store sits relative to the data plane. |
+| **ADR-015** Target platform: DGX Spark | The `main` demonstrator's hardware target — GB10 Grace Blackwell, 128 GB unified memory, ARM64, FP4 — and its serving, build, and local-first consequences. |
 | **DDD-004** Clinical corpus bounded context | The formal ubiquitous language and aggregates for the corpus domain; the context map to DDD-001 (control plane), DDD-002 (overhaul lifecycle), DDD-003 (interface). |
 
 ## Reuse of the existing spine

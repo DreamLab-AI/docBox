@@ -153,7 +153,7 @@ flowchart LR
   OL[Overhaul lifecycle\nDDD-002]
   IF[Interface\nDDD-003]
   NER[NER sidecar\nOpenMed, medspaCy, GLiNER]
-  TRUD[Terminology mount\nuser-supplied SNOMED or UMLS]
+  TRUD[Terminology\nembedded or user-mounted]
   GP -->|"conformist: audit events"| CP
   RM -->|"conformist: audit events"| CP
   CP -->|"customer-supplier: engine seam"| RM
@@ -182,9 +182,11 @@ flowchart LR
 - **External systems — anticorruption layers.** The Python NER sidecar (ADR-012) and the
   user-supplied terminology mount (ADR-013) sit outside the boundary. The grounding pipeline
   translates both: extraction output becomes Extractions and Claims, and mounted SNOMED/UMLS
-  releases are consulted through a translation layer so the domain model never embeds restricted
-  terminology — dm+d is the only vocabulary shipped. Mounting is itself an audited, operator-owned
-  configuration event in the System-Definition context, mirroring the local/cloud switch.
+  releases are consulted through a translation layer, so the domain model depends on no external
+  terminology's shape. On the permissive floor dm+d is the only embedded vocabulary; on `main` a
+  richer terminology (SNOMED/UMLS/ICD-10) may be embedded on the box or mounted (ADR-013). Either
+  way it is an audited, operator-owned configuration event in the System-Definition context,
+  mirroring the local/cloud switch.
 
 ## What this is not
 

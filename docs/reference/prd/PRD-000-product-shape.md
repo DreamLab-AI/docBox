@@ -87,14 +87,19 @@ routing, panels, the engine seam) and adds capabilities, each with its own recor
 | [PRD-011](./PRD-011-clinician-query-and-reading-mesh.md) | The specialist reading mesh and cited answers |
 | [ADR-011](../adr/ADR-011-context-native-retrieval.md) | Reject the vector-RAG backbone; read the record in context |
 | [ADR-012](../adr/ADR-012-clinical-grounding-stack.md) | OpenMed + medspaCy grounding stack (permissive) |
-| [ADR-013](../adr/ADR-013-fhir-record-and-terminology-mount.md) | FHIR record; terminology as a mount, not a bundle |
+| [ADR-013](../adr/ADR-013-fhir-record-and-terminology-mount.md) | FHIR record; dm+d floor with a user mount, and (on `main`) SNOMED/UMLS embedded on the box |
 | [ADR-014](../adr/ADR-014-corpus-store-lexical-index-and-graph.md) | SQLite FTS5 store; typed, non-embedded entity graph |
+| [ADR-015](../adr/ADR-015-target-platform-dgx-spark.md) | Target platform: NVIDIA DGX Spark (128 GB unified, ARM64, FP4) |
 | [DDD-004](../ddd/DDD-004-clinical-corpus-domain.md) | The clinical corpus bounded context |
 
 The organising choice is that retrieval is context-native: for one patient the record nearly fits
 the mesh's context, so the design reads and reconciles on recency and validity rather than embedding
-similarity ([ADR-011](../adr/ADR-011-context-native-retrieval.md)). This is a documentation phase;
-the running demonstrator is the next build, on the spine above.
+similarity ([ADR-011](../adr/ADR-011-context-native-retrieval.md)). Two `main`-only choices set the
+demo's ceiling: the permissive-only rule is relaxed for this non-distributed one-shot showcase, so
+it may use restrictively-licensed terminology (SNOMED/UMLS) and models on the box — never in this
+public repo; and it targets an NVIDIA DGX Spark, whose 128 GB of unified memory lets the whole local
+stack co-reside ([ADR-015](../adr/ADR-015-target-platform-dgx-spark.md)). The running demonstrator is
+built next, on the spine above.
 
 ## Feature areas and their homes
 

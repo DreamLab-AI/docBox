@@ -16,7 +16,8 @@ moved, so those stale predictions have been removed rather than left to mislead.
   ADR-008 self-modifying interface · ADR-009 slim core, surfaces as modules · ADR-010 panel
   registry and boundary gate.
 - ADR-011 context-native retrieval · ADR-012 clinical grounding stack · ADR-013 FHIR record and
-  terminology mount · ADR-014 corpus store, lexical index and graph. *(demonstrator pivot, `main`)*
+  terminology mount · ADR-014 corpus store, lexical index and graph · ADR-015 target platform: DGX
+  Spark. *(demonstrator pivot, `main`)*
 - DDD-001 control-plane domain · DDD-002 overhaul lifecycle · DDD-003 interface domain ·
   DDD-004 clinical corpus domain.
 

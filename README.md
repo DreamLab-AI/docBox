@@ -26,6 +26,12 @@ agents answers a clinician's questions with a citation behind every sentence. It
 vector-similarity retrieval in favour of reading the record in context — for one patient the whole
 record nearly fits. It is a demonstrator, not for clinical use, on wholly synthetic data.
 
+Because `main` is a one-shot demonstrator and not a distributed product, it is free of the
+permissive-only rule that defines `vanilla`: it may run restrictively-licensed clinical terminology
+(SNOMED CT, UMLS) and larger models directly on the box — held on the box, never committed to this
+public repo — and it targets an NVIDIA DGX Spark, whose 128 GB of unified memory runs the whole
+local stack at once.
+
 This is specified, not yet built: the [demonstrator brief](docs/demonstrator-brief.md) and its
 PRD/ADR/DDD set (start at [PRD-008](docs/reference/prd/PRD-008-clinician-demonstrator.md)) are the
 plan; the running demonstrator is the next build on the spine described below. The `vanilla` branch

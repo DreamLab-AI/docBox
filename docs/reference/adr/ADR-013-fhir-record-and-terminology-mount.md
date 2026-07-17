@@ -13,20 +13,23 @@ under CC0 — public domain, no licence risk — and Synthea (Apache-2.0), the c
 in [PRD-009](../prd/PRD-009-synthetic-patient-corpus.md), emits FHIR R4 bundles natively, so the
 machine-readable ground truth and the internal representation align without translation.
 
-The terminology question has no such comfort. The verified licence positions (RuVector digests
-`docbox-research-openmed` and `docbox-research-retrieval`):
+The terminology question turns on the licence split, and on which branch we build. The verified
+positions (RuVector digests `docbox-research-openmed` and `docbox-research-retrieval`):
 
-| Terminology | Licence | Can the image ship it? |
-|---|---|---|
-| SNOMED CT (UK edition) | TRUD / NHS England Affiliate — free at point of use, redistribution-restricted | **No** |
-| UMLS | NLM licence, restricted | **No** |
-| ICD-10 | WHO-licensed | **No** |
-| dm+d | Open Government Licence v3.0 | **Yes**, with attribution |
-| MeSH / HPO / MONDO | Permissive (CC-BY class) | Yes, optionally |
+| Terminology | Licence | Redistribute in a permissive image (`vanilla`) | Embed on the `main` box |
+|---|---|---|---|
+| SNOMED CT (UK edition) | TRUD / NHS England Affiliate — free at point of use, redistribution-restricted | **No** | **Yes**, with a TRUD account |
+| UMLS | NLM licence, restricted redistribution | **No** | **Yes**, with a UTS account |
+| ICD-10 | WHO-licensed | **No** | **Yes**, under WHO free-use terms |
+| dm+d | Open Government Licence v3.0 | **Yes**, with attribution | **Yes** |
+| MeSH / HPO / MONDO | Permissive (CC-BY class) | **Yes** | **Yes** |
 
 OpenMed does NER only ([ADR-012](./ADR-012-clinical-grounding-stack.md)); nothing in the grounding
-stack links entities to codes. Whatever coding exists must come from this decision, inside the
-permissive-only rule of [PRD-000](../prd/PRD-000-product-shape.md).
+stack links entities to codes, so whatever coding exists must come from this decision. The
+[demonstrator brief](../../demonstrator-brief.md) sets the branch rule: `vanilla` ships permissive
+only and can embed nothing past the permissive rows; `main` is a one-shot demo, not redistributed,
+so it may embed any of them on the box under their free-to-use terms, provided the restricted files
+never enter this public repo.
 
 ## Decision
 
@@ -54,29 +57,34 @@ validity interval is what makes the record longitudinal rather than merely aggre
 The name is Claim, not Fact, because this mutability is the point: anything extracted from a
 document can later be contradicted or superseded by another document.
 
-**4. Terminology is a mount, not a bundle.** The image ships what is permissive and stops there:
+**4. Terminology: a mount by default, an embed for `main`.** The permissive floor — what `vanilla`
+ships and what `main` runs with zero setup — is:
 
 - the NER stack (ADR-012), which needs no licensed terminology to run;
 - **code-free canonicalisation** — lemmatisation and string clustering — so reconciliation and
   contradiction detection work with no code system at all;
 - **dm+d** (OGL v3.0, with attribution) for medication coding, plus optionally MeSH/HPO/MONDO;
-- a **user-supplied TRUD mount**: a declared volume where a site places its own SNOMED CT or UMLS
-  release under its own licence. The container never redistributes restricted terminology; it only
-  reads what an operator chose to mount.
+- a **user-supplied mount**: a declared volume where a site places its own SNOMED CT or UMLS release
+  under its own licence, read but never redistributed.
 
-This is the same shape as the existing per-feature local/cloud switch
-([ADR-002](./ADR-002-apply-class-model.md)): a residency decision that belongs to the operator, not
-the image. Mounting a terminology is a configuration change with an apply-class, and the mount
-event lands in the audit chain ([PRD-006](../prd/PRD-006-audit-and-vaults.md)) like any other
-consequential act.
+Because `main` is a one-shot demonstrator and not redistributed, it may go further and **embed
+SNOMED CT / UMLS / ICD-10 directly on the demo box** under the free-to-use terms in the brief,
+coding the record fully instead of mounting. The restricted files are obtained at build time and
+stay on the box, never committed to this public repo. `vanilla` keeps the mount-only path as its
+permissive guarantee.
+
+Either way, terminology is read through an anticorruption layer, and choosing or mounting one is a
+configuration change with an apply-class whose event lands in the audit chain
+([PRD-006](../prd/PRD-006-audit-and-vaults.md)) — the same shape as the per-feature local/cloud
+switch ([ADR-002](./ADR-002-apply-class-model.md)).
 
 ## Consequences
 
 - **The demonstrator is complete without any mount.** dm+d codes the highest-value category
-  (medications); canonicalisation reconciles everything else; SNOMED-coded output appears only
-  where a site brings SNOMED. The demo script (PRD-008) shows the mount as an affordance — "your
-  terminology, your licence, your box" — which lands better with an NHS audience than a quietly
-  bundled violation would.
+  (medications); canonicalisation reconciles everything else; full SNOMED/UMLS coding appears where
+  `main` embeds it on the box or a site mounts its own. The demo script (PRD-008) can show the mount
+  as an affordance — "your terminology, your licence, your box" — which lands well with an NHS
+  audience.
 - The FHIR-shaped record plus coded medications exhibit the interoperability domain a
   DTAC-literate audience checks for, without any real-data or integration claim.
 - Supersession and contradiction become interval queries over typed Claims — no similarity measure
@@ -91,12 +99,13 @@ consequential act.
   becomes ours to own. Kept as the named fallback behind Medplum, not the first choice.
 - **fhir-typescript** — Apache-2.0 generated resource classes; a smaller community and slower
   cadence than Medplum, with none of its production track record.
-- **Bundle SNOMED CT in the image** — rejected outright. Redistribution breaches the TRUD Affiliate
-  licence; this is a licence violation, not a risk trade-off, and it would break the brief's
-  freely-redistributable posture.
-- **UMLS-based linking as the shipped default** (e.g. scispaCy's EntityLinker) — rejected for the
-  same reason: the NLM licence cannot travel in the image. A site holding a UMLS licence gets the
-  identical capability through the same mount.
+- **Bundle SNOMED CT into a redistributed image** — rejected for `vanilla` and for anything pushed
+  to this public repo: that is redistribution and breaches the TRUD Affiliate licence. It is *not*
+  rejected for `main`'s demo box, which may embed SNOMED under a TRUD account because the box is not
+  redistributed — the file stays on the box, out of the repo.
+- **UMLS-based linking as the shipped default** (e.g. scispaCy's EntityLinker) — not the permissive
+  default, since the NLM licence cannot travel in a redistributed image; available to `main` on the
+  box, or to any site through the mount.
 - **No coding at all** — the simplest and licence-trivial option, and canonicalisation alone would
   carry reconciliation. Rejected because coded data is the interoperability affordance the clinical
   audience looks for, and dm+d provides a fully permissive path to it for medications.
