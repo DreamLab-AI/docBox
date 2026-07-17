@@ -173,6 +173,9 @@ export function createIngestServer(store: IngestStore = createFileStore(resolveA
 
 // Only bind a port when run directly (the audit image runs `node dist/audit/ingest.js`),
 // not when imported by a test. Consistent with the control-plane server's guard.
+// The port bind is the real-process entrypoint — never exercised under test (which
+// sets DOCBOX_NO_LISTEN=1), so it is excluded from coverage rather than faked.
+/* v8 ignore start */
 if (process.env.DOCBOX_NO_LISTEN !== '1') {
   const port = Number(process.env.AUDIT_PORT ?? 9099);
   const server = createIngestServer();
@@ -182,3 +185,4 @@ if (process.env.DOCBOX_NO_LISTEN !== '1') {
     console.log(`  health: GET  /health     (write-only: no read path)`);
   });
 }
+/* v8 ignore stop */
