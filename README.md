@@ -86,7 +86,7 @@ keeps it a tenth of agentbox's surface.
 | **Companion extension** — code-server sidebar (chat + documents) | Scaffolded, compile-checked | `extension/` |
 | **Container definitions** — control-plane / audit / vault / browser images, egress firewall, oauth2-proxy | Written, compose-validated (images build on a host; DinD) | `docker/`, `scripts/` |
 | **Agent engine** — typed seam + deterministic mock; live `pi` over RPC (stdio) | Seam + mock built, tested | `server/src/engine/` |
-| **Audit ingest** — write-only, hash-chained append service | Built, tested (runs as the audit sidecar) | `server/src/audit/` |
+| **Audit trail** — control plane emits attributed events → write-only, hash-chained sidecar | Built, tested; actor from oauth2-proxy headers | `server/src/audit/` |
 | Identity (Entra + oauth2-proxy), tunnels, vaults, chat bubble | Specified; config written, host-runtime | `docs/`, `docker/` |
 
 Foreman runs against a mock world by default (offline, deterministic) and, with
