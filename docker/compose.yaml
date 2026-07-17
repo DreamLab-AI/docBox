@@ -4,7 +4,8 @@
 #   Write-only audit is enforced TOPOLOGICALLY, not by a promise in a handler.
 #     - agent-net : control-plane, oauth2-proxy, agent, browser/vault sidecars,
 #                   and ONLY the audit sidecar's ingest interface. This is where
-#                   agents live and where egress is shaped by init-firewall.
+#                   agents live. Egress is NOT yet restricted: the init-firewall
+#                   allowlist is planned (script in scripts/) but not wired.
 #     - audit-net : audit sidecar + audit storage (+ read console / SIEM
 #                   forwarder). NO agent is attached. `internal: true` keeps the
 #                   audit store off every other network. The sidecar is
@@ -26,13 +27,15 @@
 #
 # CORE vs MODULES (ADR-009). Core services run by default: control-plane and
 # audit-sidecar. The code-server surface (agent) is on by default too. Every
-# optional MODULE service is behind a compose profile matching its module id, so
-# the default `docker compose up` brings up only the slim core, and a capability
-# is enabled explicitly:
+# optional MODULE service is behind a compose profile, so the default
+# `docker compose up` brings up only the slim core, and a capability is enabled
+# explicitly:
 #     docker compose --profile local-model --profile browser --profile ocr up
-# Profiles in this file: local-model, ocr, browser, vault-fuse. The tunnel is the
-# compose.tunnel.yaml overlay; a streamed desktop is an ADR-009 candidate surface,
-# not yet a service here.
+# Profiles in this file are local-model, ocr, browser and vault-fuse. The profile
+# name is not always the module id: local-ocr uses ocr, browser-sidecar uses
+# browser, vault-sidecar uses vault-fuse. The tunnel is the compose.tunnel.yaml
+# overlay; a streamed desktop is an ADR-009 candidate surface, not yet a service
+# here.
 
 name: docbox
 
@@ -79,9 +82,10 @@ services:
 
   # =========================================================================
   # control-plane — Foreman: the Hono server + built React UI (repo server/ + app/).
-  # Renders the six tabs, owns foreman.toml, and drives the agent + rebuild
-  # orchestration. Bound loopback-only for direct admin/debug; normal traffic
-  # arrives pre-authenticated from oauth2-proxy.
+  # Renders the eight tabs (Overview, Visualiser, Activity, Work, Documents,
+  # Configuration, Operations, System), owns foreman.toml, and drives the agent
+  # + rebuild orchestration. Bound loopback-only for direct admin/debug; normal
+  # traffic arrives pre-authenticated from oauth2-proxy.
   #
   # NOTE: server/ lands in M2. Its build file (docker/Dockerfile.control-plane)
   # is written then; referenced here so the topology is complete now.
@@ -94,13 +98,13 @@ services:
       dockerfile: docker/Dockerfile.control-plane   # M2 deliverable
     env_file: [.env]
     environment:
+      PORT: "8788"                                    # bind port; matches the host mapping + oauth2 upstream
       FOREMAN_CONFIG: "/etc/docbox/foreman.toml"
       AUDIT_INGEST_URL: "http://audit-sidecar:9000/v1/events"
       AGENT_HOST: "agent"
     volumes:
       - ./foreman.toml:/etc/docbox/foreman.toml:ro   # the manifest the UI edits
       - docbox-system:/var/lib/docbox/system         # System-Definition plane
-      - /var/run/docker.sock:/var/run/docker.sock:ro # observe stack (rebuild reads state)
     ports:
       - "127.0.0.1:${CONTROL_PLANE_PORT:-8788}:8788"
     read_only: true
@@ -108,7 +112,7 @@ services:
     networks: [agent-net]
     depends_on: [audit-sidecar]
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8788/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8788/api/health"]
       interval: 15s
       timeout: 3s
       retries: 5
@@ -118,8 +122,12 @@ services:
   # agent — the sandbox image (this repo's docker/Dockerfile). Hosts the pi
   # engine (run on demand by the control plane) and the persistent code-server
   # editor. Attached to agent-net ONLY: it can reach the audit ingest port and
-  # the sidecars, and its egress is shaped by init-firewall (default-deny +
-  # foreman egress_allowlist). It has NO route to audit-net.
+  # the sidecars. It has NO route to audit-net.
+  #
+  # EGRESS IS CURRENTLY UNRESTRICTED. A default-deny egress firewall is planned:
+  # scripts/init-firewall.sh exists but is not installed into this image (not
+  # COPYed in, iptables absent) and is never invoked at startup, so the agent's
+  # outbound traffic is not yet shaped by any allowlist. Do not rely on it.
   # =========================================================================
   agent:
     <<: *hardening
@@ -144,9 +152,8 @@ services:
       - docbox-vaults:/vaults                         # gocryptfs cipherdirs
       - docbox-pnpm-store:/usr/local/pnpm/store       # shared pnpm store (cache)
       - docbox-uv-store:/opt/uv/cache                 # shared uv store (cache)
-    # init-firewall needs NET_ADMIN to install the egress allowlist at start;
-    # it drops back to the deny-default table and the agent runs unprivileged.
-    cap_add: [NET_ADMIN]
+    # No added capabilities: cap_drop:[ALL] from the hardening anchor stands.
+    # (The egress firewall that would have needed NET_ADMIN is not wired; see above.)
     command:
       - code-server
       - --auth
@@ -275,7 +282,9 @@ services:
   # =========================================================================
   browser-sidecar:
     <<: *hardening
-    image: ${BROWSER_IMAGE:-ghcr.io/browserless/chromium:latest}
+    # Default is zenika/alpine-chrome (MIT). Do NOT use ghcr.io/browserless/chromium:
+    # it is SSPL-1.0 and this product ships permissive licences only.
+    image: ${BROWSER_IMAGE:-zenika/alpine-chrome:124}
     env_file: [.env]
     # Chromium needs shared memory; give it a bounded tmpfs instead of host shm.
     shm_size: "512m"
@@ -312,9 +321,9 @@ services:
     networks: [agent-net]
 
 networks:
-  # Control-plane + agents + sidecar ingest. Egress is shaped by init-firewall,
-  # so this is a normal bridge (NOT internal — providers/registries must be
-  # reachable through the allowlist).
+  # Control-plane + agents + sidecar ingest. A normal bridge (NOT internal):
+  # providers and registries must stay reachable. Egress is not yet restricted
+  # (the init-firewall allowlist is planned, not wired), so outbound is open.
   agent-net:
     driver: bridge
   # Audit storage isolation. internal:true means nothing here can reach any

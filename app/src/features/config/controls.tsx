@@ -29,10 +29,10 @@ const linkBtn: CSSProperties = {
 };
 
 // --- boolean -----------------------------------------------------------------
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ checked, onChange, labelId }: { checked: boolean; onChange: (v: boolean) => void; labelId: string }) {
   return (
     <button
-      type="button" role="switch" aria-checked={checked}
+      type="button" role="switch" aria-checked={checked} aria-labelledby={labelId}
       onClick={() => onChange(!checked)}
       style={{
         width: 42, height: 24, borderRadius: 100, padding: 2, cursor: 'pointer',
@@ -52,9 +52,9 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 }
 
 // --- enum (segmented, or select when there are many options) -----------------
-function Segmented({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
+function Segmented({ value, options, onChange, labelId }: { value: string; options: string[]; onChange: (v: string) => void; labelId: string }) {
   return (
-    <div role="radiogroup" style={{ display: 'inline-flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--line-strong)' }}>
+    <div role="radiogroup" aria-labelledby={labelId} style={{ display: 'inline-flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--line-strong)' }}>
       {options.map((o, i) => {
         const on = o === value;
         return (
@@ -77,22 +77,22 @@ function Segmented({ value, options, onChange }: { value: string; options: strin
   );
 }
 
-function Select({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
+function Select({ value, options, onChange, labelId }: { value: string; options: string[]; onChange: (v: string) => void; labelId: string }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle(180)}>
+    <select value={value} onChange={(e) => onChange(e.target.value)} aria-labelledby={labelId} style={inputStyle(180)}>
       {options.map((o) => <option key={o} value={o}>{o}</option>)}
     </select>
   );
 }
 
 // --- number ------------------------------------------------------------------
-function NumberInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+function NumberInput({ value, onChange, labelId }: { value: number; onChange: (v: number) => void; labelId: string }) {
   const set = (n: number) => onChange(Number.isFinite(n) ? Math.max(0, n) : 0);
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
       <button type="button" className="btn" style={{ padding: '4px 11px' }} onClick={() => set(value - 1)} aria-label="decrease">−</button>
       <input
-        type="number" value={value} min={0}
+        type="number" value={value} min={0} aria-labelledby={labelId}
         onChange={(e) => set(e.target.value === '' ? 0 : Number(e.target.value))}
         className="mono" style={{ ...inputStyle(70), textAlign: 'center' }}
       />
@@ -102,17 +102,17 @@ function NumberInput({ value, onChange }: { value: number; onChange: (v: number)
 }
 
 // --- string ------------------------------------------------------------------
-function TextInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return <input value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle(220)} />;
+function TextInput({ value, onChange, labelId }: { value: string; onChange: (v: string) => void; labelId: string }) {
+  return <input value={value} onChange={(e) => onChange(e.target.value)} aria-labelledby={labelId} style={inputStyle(220)} />;
 }
 
 // --- secret (display-only demo; value is already masked, never staged) --------
-function SecretInput({ value }: { value: string }) {
+function SecretInput({ value, labelId }: { value: string; labelId: string }) {
   const [shown, setShown] = useState(false);
   const masked = '•'.repeat(Math.max(10, value.length));
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      <input readOnly value={shown ? value : masked} className="mono" style={{ ...inputStyle(170), color: 'var(--fg-1)' }} />
+      <input readOnly value={shown ? value : masked} aria-labelledby={labelId} className="mono" style={{ ...inputStyle(170), color: 'var(--fg-1)' }} />
       <button type="button" className="btn" style={{ padding: '4px 10px' }} onClick={() => setShown((s) => !s)} aria-label={shown ? 'hide value' : 'reveal value'}>
         {shown ? 'hide' : 'reveal'}
       </button>
@@ -121,7 +121,7 @@ function SecretInput({ value }: { value: string }) {
 }
 
 // --- list (editable chips; local state only) ---------------------------------
-function ChipList({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+function ChipList({ value, onChange, labelId }: { value: string[]; onChange: (v: string[]) => void; labelId: string }) {
   const [draft, setDraft] = useState('');
   const add = () => {
     const t = draft.trim();
@@ -129,7 +129,7 @@ function ChipList({ value, onChange }: { value: string[]; onChange: (v: string[]
     setDraft('');
   };
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', maxWidth: 440, justifyContent: 'flex-end' }}>
+    <div role="group" aria-labelledby={labelId} style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', maxWidth: 440, justifyContent: 'flex-end' }}>
       {value.map((c) => (
         <span key={c} className="mono" style={{
           display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 4px 3px 9px',
@@ -154,24 +154,24 @@ function ChipList({ value, onChange }: { value: string[]; onChange: (v: string[]
 }
 
 /** Dispatch to the right control for an option's type. */
-function ConfigControl({ opt, value, onChange }: { opt: ConfigOption; value: OptValue; onChange: (v: OptValue) => void }) {
+function ConfigControl({ opt, value, onChange, labelId }: { opt: ConfigOption; value: OptValue; onChange: (v: OptValue) => void; labelId: string }) {
   switch (opt.type) {
     case 'boolean':
-      return <Toggle checked={value as boolean} onChange={onChange} />;
+      return <Toggle checked={value as boolean} onChange={onChange} labelId={labelId} />;
     case 'enum': {
       const options = opt.options ?? [];
       return options.length > 4
-        ? <Select value={value as string} options={options} onChange={onChange} />
-        : <Segmented value={value as string} options={options} onChange={onChange} />;
+        ? <Select value={value as string} options={options} onChange={onChange} labelId={labelId} />
+        : <Segmented value={value as string} options={options} onChange={onChange} labelId={labelId} />;
     }
     case 'number':
-      return <NumberInput value={value as number} onChange={onChange} />;
+      return <NumberInput value={value as number} onChange={onChange} labelId={labelId} />;
     case 'string':
-      return <TextInput value={value as string} onChange={onChange} />;
+      return <TextInput value={value as string} onChange={onChange} labelId={labelId} />;
     case 'secret':
-      return <SecretInput value={value as string} />;
+      return <SecretInput value={value as string} labelId={labelId} />;
     case 'list':
-      return <ChipList value={value as string[]} onChange={onChange} />;
+      return <ChipList value={value as string[]} onChange={onChange} labelId={labelId} />;
   }
   return null;
 }
@@ -184,6 +184,7 @@ export function ConfigRow({ opt, value, dirty, onChange, onReset }: {
   onReset: () => void;
 }) {
   const [why, setWhy] = useState(false);
+  const labelId = `${opt.key}-label`;
   return (
     <div style={{
       display: 'flex', gap: 'var(--s-4)', flexWrap: 'wrap',
@@ -192,7 +193,7 @@ export function ConfigRow({ opt, value, dirty, onChange, onReset }: {
     }}>
       <div style={{ flex: '1 1 320px', minWidth: 240 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontWeight: 600 }}>{opt.label}</span>
+          <span id={labelId} style={{ fontWeight: 600 }}>{opt.label}</span>
           {dirty && <span title="staged change" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--amber)', flex: 'none' }} />}
           <button
             type="button" onClick={() => setWhy((w) => !w)} aria-expanded={why}
@@ -215,7 +216,7 @@ export function ConfigRow({ opt, value, dirty, onChange, onReset }: {
         )}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flex: 'none' }}>
-        <ConfigControl opt={opt} value={value} onChange={onChange} />
+        <ConfigControl opt={opt} value={value} onChange={onChange} labelId={labelId} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {dirty && <button type="button" onClick={onReset} style={linkBtn}>reset</button>}
           {opt.type === 'secret' && <span className="muted" style={{ fontSize: 'var(--fs-xs)' }}>display only</span>}

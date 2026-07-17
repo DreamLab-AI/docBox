@@ -102,7 +102,9 @@ function Pill({ n, glow }: { n: OrbitNode; glow: boolean }) {
         fill={dim ? 'var(--bg-3)' : `color-mix(in srgb, ${colour} 16%, var(--bg-2))`}
         stroke={colour} strokeWidth={1.25}
         style={glow ? { filter: `drop-shadow(0 0 5px color-mix(in srgb, ${colour} 60%, transparent))` } : undefined} />
-      <circle cx={centre.x - w / 2 + 13} cy={centre.y} r={4} fill={stateColour(m)} />
+      <circle cx={centre.x - w / 2 + 13} cy={centre.y} r={4} fill={stateColour(m)}>
+        <title>{`${m.name}: ${stateLabel(m)}`}</title>
+      </circle>
       <text x={centre.x + 4} y={centre.y + 3.5} textAnchor="middle" fontSize={10.5} fontWeight={600} fill="var(--fg-0)">{m.name}</text>
       {m.heavy && <text x={centre.x + w / 2 - 12} y={centre.y - h / 2 + 1} textAnchor="middle" fontSize={8} fill="var(--amber)">GPU</text>}
     </g>
@@ -116,8 +118,10 @@ function ModuleList({ title, hint, items }: { title: string; hint: string; items
         {items.map((m) => (
           <div key={m.id} style={{ display: 'grid', gap: 2, padding: 'var(--s-2)', background: 'var(--bg-2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--line)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: stateColour(m), flex: 'none' }} />
+              <span title={`state: ${m.state}`} style={{ width: 7, height: 7, borderRadius: '50%', background: stateColour(m), flex: 'none' }} />
               <strong style={{ fontSize: 'var(--fs-sm)' }}>{m.name}</strong>
+              {/* State as a word, not colour alone: on / off / available / core. */}
+              <span className="muted mono" style={{ fontSize: 'var(--fs-xs)' }}>{stateLabel(m)}</span>
               {m.heavy && <span className="badge" style={{ padding: '0 5px', color: 'var(--amber)', borderColor: 'var(--amber)' }} title="Wants a GPU or real resources">GPU</span>}
               {m.applyClass && <span style={{ marginLeft: 'auto' }}><ApplyBadge cls={m.applyClass} /></span>}
             </div>
@@ -146,4 +150,9 @@ function stateColour(m: ModuleInfo): string {
   if (m.state === 'off') return 'var(--fg-2)';
   if (m.state === 'core') return 'var(--accent)';
   return 'var(--amber)'; // available
+}
+
+/** The state as a plain word, so it never rides on colour alone. */
+function stateLabel(m: ModuleInfo): string {
+  return m.state; // 'on' | 'off' | 'available' | 'core'
 }

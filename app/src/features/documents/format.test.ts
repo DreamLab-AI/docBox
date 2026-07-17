@@ -84,7 +84,9 @@ describe('buildQueuedDoc', () => {
   it('builds a pending row, inferring mime and one page for images', () => {
     const file = new File(['x'.repeat(50000)], 'scan.PNG', { type: '' }); // uppercase ext
     const row = buildQueuedDoc({ ...base, file });
-    expect(row.id).toBe('up-42-3');
+    // Ids are minted from a UUID, not the (fixed) now + (per-batch) index, so
+    // they can never collide across separate uploads.
+    expect(row.id).toMatch(/^up-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
     expect(row.mime).toBe('image/png');
     expect(row.pages).toBe(1); // images are always a single page
     expect(row.sizeKb).toBe(Math.round(50000 / 1024));
@@ -139,6 +141,15 @@ describe('buildQueuedDoc', () => {
     const row = buildQueuedDoc({ ...base, file, route: 'mistral', handwriting: true });
     expect(row.ocrRoute).toBe('mistral');
     expect(row.handwriting).toBe(true);
+  });
+
+  it('mints a unique id even for identical args across upload batches', () => {
+    // Same fixed `now` and same `index` (both batches start at 0) — the old
+    // scheme collided here; UUID ids stay distinct.
+    const file = () => new File(['x'.repeat(200)], 'same.pdf', { type: '' });
+    const a = buildQueuedDoc({ ...base, file: file(), now: 42, index: 0 });
+    const b = buildQueuedDoc({ ...base, file: file(), now: 42, index: 0 });
+    expect(a.id).not.toBe(b.id);
   });
 });
 

@@ -5,9 +5,17 @@
 // checks, and cutover is abandoned (auto-rollback) on any failure.
 //
 // "Start rebuild" runs a simulated progress sequence only. No backend.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PendingChange } from '../../domain/types';
 import { formatValue } from './pending';
+
+const FOCUSABLE =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Tab-order focusable descendants of a dialog root (visibility-agnostic for jsdom). */
+function focusables(root: HTMLElement | null): HTMLElement[] {
+  return root ? Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)) : [];
+}
 
 const STEPS: { label: string; detail: string }[] = [
   { label: 'Write configuration', detail: 'Commit the changed keys to sandbox.toml.' },
@@ -31,6 +39,9 @@ export function RebuildPlan({ changes, onClose, onComplete }: {
   const running = step >= 0 && step < n;
   const done = step === n;
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+
   // Advance the simulated sequence one step at a time.
   useEffect(() => {
     if (!running) return;
@@ -38,9 +49,33 @@ export function RebuildPlan({ changes, onClose, onComplete }: {
     return () => clearTimeout(t);
   }, [step, running]);
 
-  // Escape closes, but only when nothing is mid-flight.
+  // Remember the trigger, move focus into the plan on open, and restore it on close.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !running) onClose(); };
+    restoreFocusRef.current = document.activeElement as HTMLElement | null;
+    focusables(dialogRef.current)[0]?.focus();
+    return () => restoreFocusRef.current?.focus?.();
+  }, []);
+
+  // Escape closes, but only when nothing is mid-flight. Tab is trapped inside.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !running) { onClose(); return; }
+      if (e.key === 'Tab') {
+        const nodes = focusables(dialogRef.current);
+        if (nodes.length === 0) return;
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        const active = document.activeElement;
+        const inside = dialogRef.current?.contains(active) ?? false;
+        if (e.shiftKey && (active === first || !inside)) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && (active === last || !inside)) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [running, onClose]);
@@ -55,6 +90,7 @@ export function RebuildPlan({ changes, onClose, onComplete }: {
       }}
     >
       <div
+        ref={dialogRef}
         className="card" onClick={(e) => e.stopPropagation()}
         style={{
           width: 'min(560px, 100%)', maxHeight: '90vh', overflow: 'auto',

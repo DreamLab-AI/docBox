@@ -42,11 +42,20 @@ const liveWorld: World = {
 };
 
 class MockEventSource {
+  // Mirror the readyState constants of the real EventSource so live.ts can
+  // reference EventSource.CLOSED against this stand-in.
+  static readonly CONNECTING = 0;
+  static readonly OPEN = 1;
+  static readonly CLOSED = 2;
+
   static instances: MockEventSource[] = [];
   url: string;
   listeners: Record<string, (ev: unknown) => void> = {};
   onerror: (() => void) | null = null;
   closed = false;
+  // A freshly-constructed source is OPEN; a transient error moves it to
+  // CONNECTING (browser auto-retrying); a fatal one moves it to CLOSED.
+  readyState: number = MockEventSource.OPEN;
 
   constructor(url: string) {
     this.url = url;
@@ -57,6 +66,7 @@ class MockEventSource {
   }
   close() {
     this.closed = true;
+    this.readyState = MockEventSource.CLOSED;
   }
   /** Test helper: dispatch a frame to the registered listener as a MessageEvent. */
   emit(type: string, data: string) {
@@ -174,12 +184,26 @@ describe('subscribeActions', () => {
     expect(adapter.store.actions()).toHaveLength(before);
   });
 
-  it('closes the stream on error', async () => {
+  it('does NOT close on a transient error so EventSource can auto-reconnect', async () => {
     const { live } = await loadLive('live');
     vi.stubGlobal('EventSource', MockEventSource);
     live.subscribeActions(() => {});
     const es = MockEventSource.instances[0];
     expect(typeof es.onerror).toBe('function');
+    // Non-terminal state: the browser is retrying. Killing the stream here would
+    // defeat the built-in reconnect, so onerror must leave it open.
+    es.readyState = MockEventSource.CONNECTING;
+    es.onerror?.();
+    expect(es.closed).toBe(false);
+  });
+
+  it('closes the stream only once EventSource has reached the terminal CLOSED state', async () => {
+    const { live } = await loadLive('live');
+    vi.stubGlobal('EventSource', MockEventSource);
+    live.subscribeActions(() => {});
+    const es = MockEventSource.instances[0];
+    // Browser gave up (readyState CLOSED) — now tearing down is correct.
+    es.readyState = MockEventSource.CLOSED;
     es.onerror?.();
     expect(es.closed).toBe(true);
   });

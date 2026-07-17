@@ -37,7 +37,7 @@ flowchart LR
   classDef done fill:#0e2b28,stroke:#33c2b4;
   classDef active fill:#2b2410,stroke:#f0a53a;
   class M1 done;
-  class M2 active;
+  class M2 done;
 ```
 
 Status legend: **Done** shipped and judged · **In progress** being specified or built now ·
@@ -46,7 +46,7 @@ Status legend: **Done** shipped and judged · **In progress** being specified or
 | Milestone | Delivers | Status | Basis |
 |---|---|---|---|
 | **M1** | Foreman UI, mock-backed, judged before containerising | Done | PRD-001, ADR-001/002/003 |
-| **M2** | Hono control-plane server; adapter swaps mock for HTTP/SSE | In progress | PRD-002, ADR-004/005, corpus/11 |
+| **M2** | Hono control-plane server; adapter swaps mock for HTTP/SSE | Done | PRD-002, ADR-004/005, corpus/11 |
 | **M3** | pi embedded via RPC/SDK; audit + identity injection through its hooks | Planned | PRD-003, corpus/12 |
 | **M4** | Multi-stage Dockerfile; three-planes snapshot/rollback; blue/green | Planned | PRD-004, ADR-006, DDD-002, corpus/10, corpus/13 |
 | **M5** | Entra SSO via oauth2-proxy; cloudflared + Access; loopback-only | Planned | PRD-005, corpus/05, corpus/06 |
@@ -63,8 +63,13 @@ Status legend: **Done** shipped and judged · **In progress** being specified or
 | Work ledger (beads) | Foreman F4 | M1 built (UI); engine M3 |
 | Configuration + apply-class | Foreman F5 | M1 built (UI); rebuild engine M4 |
 | Snapshots, audit, vaults | Foreman F6 | M1 built (UI); real M4/M6 |
+| Documents + OCR routing | Foreman F7 | M2 built (UI + server); OCR M6, PRD-007 |
+| Core/surfaces/modules manifest | Foreman F8 (System) | Built; ADR-009 |
 | Agent engine | embedded pi | M3 |
 | Chat bubble | client dashboard | M7 |
+
+The tab list is eight (Overview, Visualiser, Activity, Work, Documents, Configuration, Operations,
+System); App.tsx and the README are canonical for the current set.
 
 ## What we deliberately defer
 

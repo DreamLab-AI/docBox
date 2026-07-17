@@ -38,9 +38,10 @@ users and that makes every agent action attributable.
   apply-class, and a reach to the core over its stable API. Adding a capability is adding a module,
   never changing the core.
 
-**A module manifest** (`app/src/domain/modules.ts`) is the single source of truth for what exists:
-each entry names its layer, its state, its config gate, its compose service, and whether it is
-heavy (wants a GPU or real resources). The System view renders it; the docs reference it.
+**A module manifest** (the `modules` array in `app/src/data/mock.ts`, typed by `ModuleInfo` in
+`app/src/domain/types.ts`) is the single source of truth for what exists: each entry names its
+layer, its state, its config gate, its compose service, and whether it is heavy (wants a GPU or
+real resources). The System view renders it; the docs reference it.
 
 ## What this explicitly is not
 
@@ -80,4 +81,4 @@ are built, not declaring it finished.
 
 Governs the surface and module decisions in ADR-001 (stack), ADR-007 (primary-user surface),
 ADR-008 (self-modifying interface). The manifest is modelled in DDD-001's System-Definition
-context. Realised by `app/src/domain/modules.ts` and the System view.
+context. Realised by the `modules` array in `app/src/data/mock.ts` and the System view.

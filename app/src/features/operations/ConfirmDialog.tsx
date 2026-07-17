@@ -26,6 +26,14 @@ export interface ConfirmDialogProps {
 
 const STEP_MS = 520;
 
+const FOCUSABLE =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Tab-order focusable descendants of a dialog root (visibility-agnostic for jsdom). */
+function focusables(root: HTMLElement | null): HTMLElement[] {
+  return root ? Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)) : [];
+}
+
 export function ConfirmDialog({
   open, onClose, title, tone = 'default', confirmLabel, steps, doneMessage, children, onConfirmed,
 }: ConfirmDialogProps) {
@@ -33,6 +41,8 @@ export function ConfirmDialog({
   const [done, setDone] = useState(0); // completed step count
   const timers = useRef<number[]>([]);
   const confirmBtn = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   // Reset to a clean confirm state each time the dialog opens; clear any timers
   // on close/unmount so a dismissed run never fires a late callback.
@@ -47,13 +57,37 @@ export function ConfirmDialog({
     };
   }, [open]);
 
+  // Remember what was focused before we opened, and hand focus back on close so
+  // keyboard users are not dropped at the top of the page.
+  useEffect(() => {
+    if (!open) return;
+    restoreFocusRef.current = document.activeElement as HTMLElement | null;
+    return () => restoreFocusRef.current?.focus?.();
+  }, [open]);
+
   useEffect(() => {
     if (open && phase === 'confirm') confirmBtn.current?.focus();
   }, [open, phase]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape' && phase !== 'running') onClose();
+      if (e.key === 'Escape' && phase !== 'running') { onClose(); return; }
+      // Trap Tab: cycle focus among the dialog's focusable elements.
+      if (e.key === 'Tab') {
+        const nodes = focusables(dialogRef.current);
+        if (nodes.length === 0) return;
+        const first = nodes[0];
+        const last = nodes[nodes.length - 1];
+        const active = document.activeElement;
+        const inside = dialogRef.current?.contains(active) ?? false;
+        if (e.shiftKey && (active === first || !inside)) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && (active === last || !inside)) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     }
     if (open) window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -87,6 +121,7 @@ export function ConfirmDialog({
       }}
     >
       <div
+        ref={dialogRef}
         className="card ops-dialog"
         role="dialog"
         aria-modal="true"

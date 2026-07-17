@@ -132,7 +132,7 @@ describe('constants', () => {
     expect(TAB_LABEL.interface).toBe('Interface');
   });
 
-  it('orders the apply classes that reach a rebuild plan', () => {
-    expect(APPLY_ORDER).toEqual(['live', 'session', 'rebuild']);
+  it('orders every apply class, hot first, through to rebuild', () => {
+    expect(APPLY_ORDER).toEqual(['hot', 'live', 'session', 'rebuild']);
   });
 });

@@ -70,4 +70,17 @@ describe('SystemTab', () => {
     // A gated module surfaces its gate key.
     expect(within(card).getByText('gate: ocr.route')).toBeInTheDocument();
   });
+
+  it('shows each module state as a word, not colour alone', () => {
+    render(<SystemTab />);
+    // Modules: Tunnel is off, QE fleet is available, the other five are on.
+    const modules = listCard('Modules');
+    expect(within(modules).getByText('off')).toBeInTheDocument();
+    expect(within(modules).getByText('available')).toBeInTheDocument();
+    expect(within(modules).getAllByText('on').length).toBeGreaterThanOrEqual(5);
+
+    // Core pieces read as "core".
+    const core = listCard('Core');
+    expect(within(core).getAllByText('core')).toHaveLength(6);
+  });
 });

@@ -10,6 +10,7 @@
 // unanchored chain is needed (states the deterministic mock never produces) the
 // store.audit accessor is spied to return a crafted trail — the store itself is
 // untouched.
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, within, act, cleanup } from '@testing-library/react';
 import OperationsTab from './OperationsTab';
@@ -458,6 +459,45 @@ describe('ConfirmDialog', () => {
     await advance(520); // mid-run, not finished
     fireEvent.mouseDown(backdrop);
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('traps Tab focus within the open dialog (cycles first↔last)', () => {
+    render(<ConfirmDialog {...baseProps} />);
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+    const proceed = screen.getByRole('button', { name: 'Proceed' });
+
+    // Tab off the last control wraps to the first.
+    proceed.focus();
+    fireEvent.keyDown(proceed, { key: 'Tab' });
+    expect(cancel).toHaveFocus();
+
+    // Shift+Tab off the first control wraps to the last.
+    fireEvent.keyDown(cancel, { key: 'Tab', shiftKey: true });
+    expect(proceed).toHaveFocus();
+  });
+
+  it('restores focus to the trigger element when it closes', () => {
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button onClick={() => setOpen(true)}>open dialog</button>
+          <ConfirmDialog {...baseProps} open={open} onClose={() => setOpen(false)} />
+        </>
+      );
+    }
+    render(<Harness />);
+    const trigger = screen.getByRole('button', { name: 'open dialog' });
+    trigger.focus();
+    expect(trigger).toHaveFocus();
+
+    // Opening moves focus into the dialog (the confirm button).
+    fireEvent.click(trigger);
+    expect(screen.getByRole('button', { name: 'Proceed' })).toHaveFocus();
+
+    // Closing hands focus back to the trigger.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(trigger).toHaveFocus();
   });
 
   it('closes on Escape while confirming, but ignores Escape while running', async () => {

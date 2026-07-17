@@ -24,6 +24,23 @@ describe('AgentTree', () => {
     expect(screen.getByText('No agents spawned.')).toBeInTheDocument();
   });
 
+  it('renders a neutral owner dot when the session owner is unknown (live data)', () => {
+    const session = { id: 'sess-orphan', ownerId: 'no-such-owner', title: 'Orphan session', startedAt: store.now() };
+    const { container } = render(
+      <AgentTree
+        sessions={[session]}
+        agents={[]}
+        actionCounts={new Map()}
+        filters={EMPTY_FILTERS}
+        now={store.now()}
+        update={() => {}}
+      />,
+    );
+    // Renders without throwing on the missing owner, with a neutral placeholder.
+    expect(screen.getByText('Orphan session')).toBeInTheDocument();
+    expect(container.querySelector('[title="unknown owner"]')).toBeInTheDocument();
+  });
+
   it('renders the "no sessions" empty state', () => {
     render(
       <AgentTree

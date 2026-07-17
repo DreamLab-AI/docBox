@@ -86,4 +86,6 @@ export const TAB_LABEL: Record<ConfigTabId, string> = {
   interface: 'Interface',
 };
 
-export const APPLY_ORDER: ApplyClass[] = ['live', 'session', 'rebuild'];
+// 'hot' leads: a staged hot-class change (interface density/panels) must show
+// its own class breakdown in the pending drawer rather than an empty group.
+export const APPLY_ORDER: ApplyClass[] = ['hot', 'live', 'session', 'rebuild'];

@@ -234,7 +234,7 @@ RUN --mount=type=cache,target=/root/.cache,uid=0,gid=0 \
 # ---------------------------------------------------------------------------
 LABEL org.opencontainers.image.title="docBox sandbox" \
       org.opencontainers.image.description="Self-contained client dev sandbox: pi agent + code-server + TOML-gated toolchain bundles" \
-      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.source="https://example.invalid/docbox"
 
 WORKDIR /workspace

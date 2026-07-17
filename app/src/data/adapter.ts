@@ -80,6 +80,10 @@ export const store = {
 
   timeWindow: (): [number, number] => {
     const ts = world.actions.map((a) => a.ts);
+    // With no actions, Math.min() is +Infinity — a poison value that produces
+    // NaN in any downstream span/scale maths. Collapse to a zero-width window
+    // anchored on the clock instead.
+    if (ts.length === 0) return [world.now, world.now];
     return [Math.min(...ts), Math.max(...ts, world.now)];
   },
 };

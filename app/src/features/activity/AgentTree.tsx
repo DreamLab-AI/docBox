@@ -27,6 +27,7 @@ export function AgentTree({ sessions, agents, actionCounts, filters, now, update
         const roots = buildAgentTree(agents, s.id);
         const live = !s.endedAt;
         const selected = filters.sessionId === s.id;
+        const sessionOwner = store.ownerById(s.ownerId);
         return (
           <div key={s.id} style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
             <button className="act-node" onClick={() => update({ sessionId: selected ? null : s.id, agentId: null })}
@@ -37,7 +38,9 @@ export function AgentTree({ sessions, agents, actionCounts, filters, now, update
                 background: selected ? 'color-mix(in srgb, var(--accent) 16%, var(--bg-2))' : 'var(--bg-2)',
                 border: 'none', borderLeft: `2px solid ${selected ? 'var(--accent)' : 'transparent'}`,
               }}>
-              <OwnerDot owner={store.ownerById(s.ownerId)!} size={8} />
+              {sessionOwner
+                ? <OwnerDot owner={sessionOwner} size={8} />
+                : <span aria-hidden title="unknown owner" style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--fg-2)', flex: 'none' }} />}
               <span style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, fontSize: 'var(--fs-sm)' }}>
                 {s.title}
               </span>

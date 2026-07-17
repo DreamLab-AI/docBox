@@ -17,7 +17,7 @@ CI runner**.
 | `.env.example` | Every environment variable the stack reads. Copy to `.env`. |
 | `../scripts/rebuild.sh` | Blue/green overhaul: snapshot → build → GREEN → verify → cut over / auto-rollback. |
 | `../scripts/rollback.sh` | Post-cutover rollback to a retained prior tag (+ optional git revert). |
-| `../scripts/init-firewall.sh` | Default-deny egress firewall reading the allowlist from `foreman.toml`/env. |
+| `../scripts/init-firewall.sh` | Default-deny egress firewall reading the allowlist from `foreman.toml`/env. Planned: not yet installed into the image or invoked at startup. |
 
 ## Build args (bundle gating)
 
@@ -49,12 +49,18 @@ docker build \
 ```bash
 cd docker
 cp .env.example .env          # fill in provider keys, Entra IDs, cookie secret
-docker compose build          # builds agent + control-plane images
+docker compose build          # builds the agent/sandbox image only (see note below)
 docker compose up -d          # base stack: control-plane, agent, audit, sidecars
-
-# Inside the agent container, install the egress allowlist (needs CAP_NET_ADMIN):
-docker compose exec agent /scripts/init-firewall.sh
 ```
+
+Only the main `Dockerfile` (the agent/sandbox image) builds today. The compose file also
+references `Dockerfile.control-plane` (M2), `Dockerfile.audit` and `Dockerfile.vault` (M6); those
+files do not exist yet, so `docker compose build` builds only the sandbox image until those
+milestones land.
+
+Egress is not yet restricted. `scripts/init-firewall.sh` is written but is not installed into the
+image or invoked at startup, so there is no working `init-firewall` step to run after `up` yet; it
+is planned (see PRD-004/PRD-005).
 
 Host ports bind `127.0.0.1` only. Reach Foreman on `https://127.0.0.1:8443`
 (oauth2-proxy → control-plane) or the control plane directly on
@@ -89,8 +95,8 @@ Two docker networks enforce write-only audit **topologically**, not by policy in
 a handler:
 
 - **`agent-net`**: control-plane, oauth2-proxy, agent, browser/vault sidecars,
-  and only the audit sidecar's ingest interface. Egress is shaped by
-  `init-firewall.sh`.
+  and only the audit sidecar's ingest interface. Egress is currently
+  unrestricted; the `init-firewall.sh` allowlist is planned, not yet wired.
 - **`audit-net`**: `internal: true`. The audit sidecar (dual-homed) and its
   storage. No agent is attached, so agents have no route to the audit read path.
 

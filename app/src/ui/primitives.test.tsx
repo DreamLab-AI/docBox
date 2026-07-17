@@ -126,9 +126,18 @@ describe('StatusPip', () => {
 
   it.each(Object.entries(colourFor))('maps %s to its colour', (status, colour) => {
     const { container } = render(<StatusPip status={status as never} />);
-    const style = (container.firstChild as HTMLElement).getAttribute('style') ?? '';
+    const pip = container.firstChild as HTMLElement;
+    const style = pip.getAttribute('style') ?? '';
     expect(style).toContain(`background: ${colour}`);
     expect(style).toContain(`box-shadow: 0 0 8px ${colour}`);
+    // Status is not colour-only: the pip carries a title defaulting to the status.
+    expect(pip).toHaveAttribute('title', status);
+  });
+
+  it('renders a visually-hidden label (and title) when one is supplied', () => {
+    render(<StatusPip status="ok" label="all good" />);
+    expect(screen.getByText('all good')).toBeInTheDocument();
+    expect(screen.getByTitle('all good')).toBeInTheDocument();
   });
 });
 

@@ -71,6 +71,27 @@ describe('GET /api/health', () => {
   });
 });
 
+describe('CORS', () => {
+  it('does not grant a hostile origin: no Access-Control-Allow-Origin header', async () => {
+    // No DOCBOX_ALLOWED_ORIGIN in the env, so the server defaults to the Vite
+    // dev app origin. A cross-origin caller is DENIED — no ACAO header is set,
+    // so the browser blocks it. The old bare cors() reflected '*' to everyone.
+    const res = await app.request('/api/world', { headers: { Origin: 'https://evil.example' } });
+    expect(res.status).toBe(200);
+    const acao = res.headers.get('access-control-allow-origin');
+    expect(acao).toBeNull();
+    expect(acao).not.toBe('*');
+    expect(acao).not.toBe('https://evil.example');
+  });
+
+  it('honours DOCBOX_ALLOWED_ORIGIN when set (dev proxy origin still works)', async () => {
+    const res = await app.request('/api/world', { headers: { Origin: 'http://localhost:5173' } });
+    expect(res.status).toBe(200);
+    // The dev app origin is the default, so its own requests are always allowed.
+    expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:5173');
+  });
+});
+
 describe('GET /api/world', () => {
   it('hydrates the whole world in one call with correct collection lengths', async () => {
     const res = await app.request('/api/world');

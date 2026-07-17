@@ -176,15 +176,20 @@ bind-mount limitation). See [docker/README.md](docker/README.md) for the build a
   [003 agent engine](docs/reference/prd/PRD-003-agent-engine.md) ·
   [004 container/rebuild](docs/reference/prd/PRD-004-container-and-rebuild.md) ·
   [005 identity/network](docs/reference/prd/PRD-005-identity-and-network.md) ·
-  [006 audit/vaults](docs/reference/prd/PRD-006-audit-and-vaults.md)
+  [006 audit/vaults](docs/reference/prd/PRD-006-audit-and-vaults.md) ·
+  [007 documents/OCR](docs/reference/prd/PRD-007-documents-and-ocr.md)
 - ADR [001](docs/reference/adr/ADR-001-stack-and-mock-first.md) ·
   [002](docs/reference/adr/ADR-002-apply-class-model.md) ·
   [003](docs/reference/adr/ADR-003-visualiser-rendering.md) ·
   [004](docs/reference/adr/ADR-004-config-persistence-toml.md) ·
   [005](docs/reference/adr/ADR-005-live-event-transport.md) ·
-  [006](docs/reference/adr/ADR-006-snapshot-store.md)
+  [006](docs/reference/adr/ADR-006-snapshot-store.md) ·
+  [007 primary-user surface](docs/reference/adr/ADR-007-primary-user-surface.md) ·
+  [008 self-modifying interface](docs/reference/adr/ADR-008-live-self-modifying-interface.md) ·
+  [009 slim core/modules](docs/reference/adr/ADR-009-slim-core-surfaces-as-modules.md)
 - DDD [001 domain model](docs/reference/ddd/DDD-001-control-plane-domain.md) ·
-  [002 overhaul lifecycle](docs/reference/ddd/DDD-002-overhaul-lifecycle.md)
+  [002 overhaul lifecycle](docs/reference/ddd/DDD-002-overhaul-lifecycle.md) ·
+  [003 interface domain](docs/reference/ddd/DDD-003-interface-domain.md)
 
 ## Roadmap
 

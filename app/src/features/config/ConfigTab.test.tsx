@@ -224,6 +224,19 @@ describe('ConfigTab — controls per option type', () => {
     expect(screen.getByRole('button', { name: 'hide value' })).toBeInTheDocument();
   });
 
+  it('ties each control to its option label for assistive tech', () => {
+    render(<ConfigTab />);
+    // The boolean toggle, the enum select and the enum radiogroup all point at
+    // their row label via aria-labelledby, so they have an accessible name.
+    const toggle = screen.getAllByRole('switch')[0];
+    expect(toggle).toHaveAttribute('aria-labelledby');
+    const labelId = toggle.getAttribute('aria-labelledby')!;
+    expect(document.getElementById(labelId)?.textContent).toBeTruthy();
+
+    expect(screen.getByRole('combobox')).toHaveAttribute('aria-labelledby');
+    expect(screen.getAllByRole('radiogroup')[0]).toHaveAttribute('aria-labelledby');
+  });
+
   it('renders a number stepper: increment, decrement, direct entry and empty→0 (Identity tab)', () => {
     render(<ConfigTab />);
     fireEvent.click(screen.getByRole('tab', { name: 'Identity' }));
@@ -290,5 +303,20 @@ describe('ConfigTab — hot apply-class', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Interface' }));
     // density and panels are hot-class → at least two Hot badges.
     expect(screen.getAllByText('Hot').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('surfaces a staged hot change with its Hot chip in the pending drawer', () => {
+    render(<ConfigTab />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Interface' }));
+
+    // Switch Density comfortable → compact: a hot-class enum edit.
+    fireEvent.click(screen.getByRole('radio', { name: 'compact' }));
+
+    // The drawer opens and the hot class is counted (previously the hot class
+    // was missing from APPLY_ORDER, so its chip never appeared).
+    expect(screen.getByText(/1 staged change/)).toBeInTheDocument();
+    expect(screen.getByText('× 1')).toBeInTheDocument();
+    // Row badges (density + panels) plus the new drawer chip → 3 Hot labels.
+    expect(screen.getAllByText('Hot').length).toBeGreaterThanOrEqual(3);
   });
 });

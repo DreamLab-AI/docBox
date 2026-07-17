@@ -98,3 +98,88 @@ describe('App shell', () => {
     expect(selected).toHaveLength(0);
   });
 });
+
+// The a11y contract: the tablist role must not eat the nav/main landmarks, the
+// tab↔panel relationship must be wired both ways, and the tablist must be
+// operable by keyboard (roving tabindex + arrow/Home/End) with activation
+// moving focus into the panel so the change is announced.
+describe('App shell — accessibility contract', () => {
+  it('keeps the nav and main landmarks intact alongside the tablist', () => {
+    render(<App />);
+    const nav = screen.getByRole('navigation', { name: 'Sections' });
+    const main = screen.getByRole('main');
+    const tablist = screen.getByRole('tablist', { name: 'Control plane sections' });
+    expect(nav).toBeInTheDocument();
+    expect(main).toBeInTheDocument();
+    // The tablist lives inside the nav landmark; it does not replace it.
+    expect(nav).toContainElement(tablist);
+    expect(nav).not.toBe(tablist);
+  });
+
+  it('exposes a single top-level h1 wordmark', () => {
+    render(<App />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Foreman' })).toBeInTheDocument();
+  });
+
+  it('wires each tab to a panel (aria-controls) and labels the panel by the active tab', () => {
+    render(<App />);
+    // Every tab declares which panel it controls.
+    shellTabs().getAllByRole('tab').forEach((t) => expect(t).toHaveAttribute('aria-controls'));
+    // The selected tab controls the rendered panel; the panel points back at it.
+    const overviewTab = shellTabs().getByRole('tab', { name: 'Overview' });
+    expect(overviewTab).toHaveAttribute('id', 'tab-overview');
+    expect(overviewTab).toHaveAttribute('aria-controls', 'panel-overview');
+    const panel = document.getElementById('panel-overview') as HTMLElement;
+    expect(panel).toHaveAttribute('role', 'tabpanel');
+    expect(panel).toHaveAttribute('aria-labelledby', 'tab-overview');
+    expect(panel).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('applies roving tabindex: only the selected tab is in the tab order', () => {
+    render(<App />);
+    expect(shellTabs().getByRole('tab', { name: 'Overview' })).toHaveAttribute('tabindex', '0');
+    expect(shellTabs().getByRole('tab', { name: 'Visualiser' })).toHaveAttribute('tabindex', '-1');
+    expect(shellTabs().getByRole('tab', { name: 'System' })).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('navigates with ArrowRight/ArrowLeft, wrapping and moving focus with selection', () => {
+    render(<App />);
+    const tablist = screen.getByRole('tablist', { name: 'Control plane sections' });
+
+    fireEvent.keyDown(tablist, { key: 'ArrowRight' });
+    const visualiser = shellTabs().getByRole('tab', { name: 'Visualiser' });
+    expect(visualiser).toHaveAttribute('aria-selected', 'true');
+    expect(visualiser).toHaveAttribute('tabindex', '0');
+    expect(shellTabs().getByRole('tab', { name: 'Overview' })).toHaveAttribute('tabindex', '-1');
+    expect(document.activeElement).toBe(visualiser);
+
+    // Back to Overview, then ArrowLeft wraps to the last tab (System).
+    fireEvent.keyDown(tablist, { key: 'ArrowLeft' });
+    expect(shellTabs().getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.keyDown(tablist, { key: 'ArrowLeft' });
+    expect(shellTabs().getByRole('tab', { name: 'System' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('jumps to the ends with Home and End and ignores non-navigation keys', () => {
+    render(<App />);
+    const tablist = screen.getByRole('tablist', { name: 'Control plane sections' });
+
+    fireEvent.keyDown(tablist, { key: 'End' });
+    expect(shellTabs().getByRole('tab', { name: 'System' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.keyDown(tablist, { key: 'Home' });
+    expect(shellTabs().getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
+
+    // A key the tablist does not handle leaves the selection untouched.
+    fireEvent.keyDown(tablist, { key: 'a' });
+    expect(shellTabs().getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('moves focus into the panel when a tab is activated by click', () => {
+    render(<App />);
+    fireEvent.click(shellTabs().getByRole('tab', { name: 'System' }));
+    const panel = document.getElementById('panel-system') as HTMLElement;
+    expect(panel).toHaveAttribute('aria-labelledby', 'tab-system');
+    expect(panel).toHaveAttribute('role', 'tabpanel');
+    expect(document.activeElement).toBe(panel);
+  });
+});

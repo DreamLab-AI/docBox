@@ -99,9 +99,10 @@ describe('timeWindow', () => {
   });
 
   it('collapses to [now, now] when there are no actions', () => {
-    // Math.min() === +Infinity, Math.max(now) === now for an empty ts array.
+    // Empty ts array would make Math.min() === +Infinity (a NaN-poison upper
+    // bound downstream); the guard returns a zero-width window on the clock.
     hydrate(mkWorld({ now: 777, actions: [] }));
-    expect(store.timeWindow()).toEqual([Infinity, 777]);
+    expect(store.timeWindow()).toEqual([777, 777]);
   });
 });
 

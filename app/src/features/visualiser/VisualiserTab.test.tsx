@@ -43,6 +43,25 @@ describe('VisualiserTab — scaffold', () => {
     expect(screen.getByText('Status')).toBeInTheDocument(); // fixed status legend
   });
 
+  it('gives the canvas an accessible name and points to the Activity list', () => {
+    render(<VisualiserTab />);
+    // The canvas is exposed as an image with a descriptive name summarising the
+    // scene (count + grouping), so it is not an unlabelled graphic.
+    const canvas = screen.getByRole('img', {
+      name: new RegExp(`Timeline, ${N} actions grouped by owner`),
+    });
+    expect(canvas.tagName.toLowerCase()).toBe('canvas');
+    expect(canvas).toHaveAttribute('aria-label', expect.stringContaining('Activity tab lists the same events'));
+    // A visible pointer sends screen-reader users to the text equivalent.
+    expect(screen.getByText(/screen-reader-friendly list/)).toBeInTheDocument();
+  });
+
+  it('re-labels the canvas when the grouping changes', () => {
+    render(<VisualiserTab />);
+    fireEvent.click(screen.getByRole('button', { name: 'Agent' }));
+    expect(screen.getByRole('img', { name: new RegExp(`Timeline, ${N} actions grouped by agent`) })).toBeInTheDocument();
+  });
+
   it('shows the empty state when there are no actions', () => {
     vi.spyOn(store, 'actions').mockReturnValue([]);
     render(<VisualiserTab />);

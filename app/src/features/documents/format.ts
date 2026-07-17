@@ -101,12 +101,16 @@ export function buildQueuedDoc(args: {
   now: number;
   index: number;
 }): DocumentInfo {
-  const { file, project, ownerId, route, handwriting, now, index } = args;
+  const { file, project, ownerId, route, handwriting, now } = args;
   const mime = file.type || inferMime(file.name);
   const sizeKb = Math.max(1, Math.round(file.size / 1024));
   const pages = docType(mime) === 'image' ? 1 : Math.max(1, Math.round(sizeKb / 90));
   return {
-    id: `up-${now}-${index}`,
+    // Collision-free id: `now` is a fixed value across an upload batch and
+    // `index` restarts at 0 each batch, so a time-plus-index scheme minted
+    // duplicate ids across separate uploads — duplicate React keys, and the
+    // reconcile step overwriting the wrong row. A UUID is unique per row.
+    id: `up-${crypto.randomUUID()}`,
     name: file.name,
     ownerId,
     project,

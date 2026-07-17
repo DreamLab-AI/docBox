@@ -7,17 +7,37 @@ import type { ActionEvent } from '../domain/types';
 export const IS_LIVE = import.meta.env.VITE_DATA_MODE === 'live';
 const API = import.meta.env.VITE_API_BASE ?? '';
 
+/** The data plane the UI is actually running on, resolved by bootstrapWorld():
+ *  - 'mock'     offline deterministic world (live mode off)
+ *  - 'live'     hydrated from the control-plane server
+ *  - 'degraded' live mode requested but the server was unreachable → mock data
+ * The header badge reads this so it can never claim 'live' while showing mock. */
+export type LiveStatus = 'live' | 'degraded' | 'mock';
+let currentStatus: LiveStatus = 'mock';
+
+/** The real live/degraded/mock state after boot. Drives the TopBar badge. */
+export function liveStatus(): LiveStatus {
+  return currentStatus;
+}
+
 /** Fetch and install the world. Returns true if live data was loaded. */
 export async function bootstrapWorld(): Promise<boolean> {
-  if (!IS_LIVE) return false;
+  if (!IS_LIVE) {
+    currentStatus = 'mock';
+    return false;
+  }
   try {
     const res = await fetch(`${API}/api/world`);
     if (!res.ok) throw new Error(`world fetch ${res.status}`);
     const data = (await res.json()) as World;
     hydrate(data);
+    currentStatus = 'live';
     return true;
   } catch (err) {
     console.warn('[docBox] live world unavailable, using mock:', (err as Error).message);
+    // Live was asked for but the control plane did not answer: keep the mock
+    // world but record that we are degraded so the UI can tell the truth.
+    currentStatus = 'degraded';
     return false;
   }
 }
@@ -35,6 +55,12 @@ export function subscribeActions(onAction: (a: ActionEvent) => void): () => void
       /* ignore malformed frame */
     }
   });
-  es.onerror = () => es.close();
+  es.onerror = () => {
+    // A transient error (network blip, server restart) leaves readyState at
+    // CONNECTING while EventSource retries on its own — do NOT close, or that
+    // built-in auto-reconnect is defeated forever. Only tear down when the
+    // browser has already given up and moved to the terminal CLOSED state.
+    if (es.readyState === EventSource.CLOSED) es.close();
+  };
   return () => es.close();
 }

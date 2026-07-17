@@ -17,6 +17,12 @@ is a property of the option, fixed and known in advance. The UI renders the clas
 badge next to every control (teal/live, amber/session, rose/rebuild), and only rebuild changes
 route through a reviewed plan with snapshot and auto-rollback.
 
+> Note: ADR-008 later extended this model with a fourth class, `hot`: interface
+> edits applied via HMR or the layout manifest, badged violet, for sub-second
+> layout changes that cannot break the box. `ApplyClass` is therefore now a
+> four-value enum (`hot`, `live`, `session`, `rebuild`). See
+> [ADR-008](ADR-008-live-self-modifying-interface.md).
+
 ## Consequences
 
 - The operator learns each control's class once; the badge is always visible.
@@ -28,6 +34,6 @@ route through a reviewed plan with snapshot and auto-rollback.
 
 ## Consequence for the domain
 
-`ApplyClass` is a frozen enum in `domain/types.ts`. Adding an option means choosing its class,
+`ApplyClass` is a frozen four-value enum in `domain/types.ts` (`hot` added by ADR-008). Adding an option means choosing its class,
 which forces the author to decide up front whether a setting is safe to change live. That decision
 is the useful discipline the model imposes.

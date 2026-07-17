@@ -48,14 +48,28 @@ export function OwnerTag({ ownerId }: { ownerId: string }) {
   );
 }
 
-export function StatusPip({ status }: { status: 'ok' | 'blocked' | 'failed' | 'running' | 'idle' | 'done' | 'pass' | 'fail' | 'promoted' | 'auto_rolled_back' | 'candidate' }) {
+export function StatusPip({ status, label }: {
+  status: 'ok' | 'blocked' | 'failed' | 'running' | 'idle' | 'done' | 'pass' | 'fail' | 'promoted' | 'auto_rolled_back' | 'candidate';
+  /** When set, adds a visually-hidden text label so status is not colour-only. */
+  label?: string;
+}) {
   const colour =
     status === 'ok' || status === 'pass' || status === 'promoted' || status === 'done' ? 'var(--green)' :
     status === 'failed' || status === 'fail' || status === 'auto_rolled_back' ? 'var(--rose)' :
     status === 'blocked' ? 'var(--amber)' :
     status === 'running' || status === 'candidate' ? 'var(--accent)' :
     'var(--fg-2)';
-  return <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: colour, boxShadow: `0 0 8px ${colour}` }} />;
+  const text = label ?? status;
+  return (
+    <span title={text} style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: colour, boxShadow: `0 0 8px ${colour}` }}>
+      {label != null && (
+        <span style={{
+          position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
+          overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
+        }}>{label}</span>
+      )}
+    </span>
+  );
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {

@@ -39,7 +39,11 @@ const MODE_LABEL: Record<GroupMode, string> = {
 };
 
 export default function VisualiserTab() {
-  const actions = useMemo(() => store.actions(), []);
+  // Read the CURRENT actions, not a mount-time snapshot: the App re-renders this
+  // tab on each SSE arrival so it re-reads the store. Depending on the live array
+  // keeps referential stability between unchanged renders (the store returns the
+  // same reference) while picking up new marks the moment they land.
+  const actions = useMemo(() => store.actions(), [store.actions()]);
 
   const [mode, setMode] = useState<GroupMode>('owner');
   const [width, setWidth] = useState(0);
@@ -188,6 +192,13 @@ export default function VisualiserTab() {
 
   const selected = selectedId ? actions.find((a) => a.id === selectedId) ?? null : null;
 
+  // The canvas is a picture with no intrinsic text, so name it for assistive tech.
+  const [winStart, winEnd] = store.timeWindow();
+  const canvasLabel =
+    `Timeline, ${actions.length} actions grouped by ${MODE_LABEL[mode]}, ` +
+    `${fmtTime(winStart)} to ${fmtTime(winEnd)}. ` +
+    'The Activity tab lists the same events as text.';
+
   const intro = (
     <WhenToUse>
       Answers who did what, to what, and when. Regroup the same events by owner, agent, element
@@ -218,6 +229,8 @@ export default function VisualiserTab() {
         <div ref={wrapRef} style={{ position: 'relative', width: '100%' }}>
           <canvas
             ref={canvasRef}
+            role="img"
+            aria-label={canvasLabel}
             onPointerDown={onDown}
             onPointerMove={onMove}
             onPointerUp={onUp}
@@ -226,6 +239,10 @@ export default function VisualiserTab() {
           />
           {hover && layout && <Tooltip mark={layout.marks[hover.i]} geo={layout.geo} />}
         </div>
+        <p className="muted" style={{ margin: 'var(--s-2) 0 0', fontSize: 'var(--fs-xs)' }}>
+          This timeline is a picture. The <strong>Activity</strong> tab has the same events as a
+          screen-reader-friendly list.
+        </p>
 
         {/* Playback + scrubber */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', marginTop: 'var(--s-3)' }}>

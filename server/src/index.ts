@@ -26,7 +26,11 @@ const APP_DIST = join(here, '../../app/dist');
 const PORT = Number(process.env.PORT ?? 8787);
 
 const app = new Hono();
-app.use('/api/*', cors());
+// Restrict cross-origin access to a single known origin instead of reflecting
+// any caller. Defaults to the Vite dev app origin so the dev proxy keeps working;
+// a deployment sets DOCBOX_ALLOWED_ORIGIN to the real UI origin.
+const ALLOWED_ORIGIN = process.env.DOCBOX_ALLOWED_ORIGIN ?? 'http://localhost:5173';
+app.use('/api/*', cors({ origin: ALLOWED_ORIGIN }));
 
 // ── World snapshot ─────────────────────────────────────────────────────────
 // One call hydrates the whole UI. The adapter reads this at boot in live mode.

@@ -13,7 +13,7 @@
   /* Text */
   --fg-0: #eef2f8;   /* primary */
   --fg-1: #aeb8c8;   /* secondary */
-  --fg-2: #6b7688;   /* muted / captions */
+  --fg-2: #868f9f;   /* muted / captions — clears WCAG AA (≥4.5:1) on bg-0/1/2 */
 
   /* Brand + accents (also the visualiser palette anchors) */
   --accent: #5b8cff;      /* primary action, live */
