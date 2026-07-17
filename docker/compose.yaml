@@ -282,16 +282,40 @@ services:
   # =========================================================================
   browser-sidecar:
     <<: *hardening
-    # Default is zenika/alpine-chrome (MIT). Do NOT use ghcr.io/browserless/chromium:
-    # it is SSPL-1.0 and this product ships permissive licences only.
-    image: ${BROWSER_IMAGE:-zenika/alpine-chrome:124}
+    # The UNDETECTABLE path (matches the agentbox browsercontainer): real Google
+    # Chrome, headful in Xvfb, GPU-accelerated (Vulkan/ANGLE/WebGPU), driven via
+    # chrome-devtools-mcp/CDP. Headless images (browserless=SSPL, alpine-chrome,
+    # headless-shell) carry the chromium-headless-shell + SwiftShader fingerprints
+    # that bot-detection flags; this does not.
+    # LICENCE: Google Chrome is proprietary Google freeware — a DELIBERATE
+    # exception to the permissive-only rule (operator decision: undetectability
+    # over licence purity for browsing). See docker/Dockerfile.browser.
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.browser
+    # Fixed image name (not ${BROWSER_IMAGE}) on purpose: a stale BROWSER_IMAGE
+    # in someone's .env must NOT be able to swap this for a headless image and
+    # silently re-detectable-ify the sidecar. The undetectable build is the only
+    # supported path for this module.
+    image: docbox/browser:dev
     env_file: [.env]
-    # Chromium needs shared memory; give it a bounded tmpfs instead of host shm.
+    # Chrome needs shared memory; give it a bounded tmpfs instead of host shm.
     shm_size: "512m"
-    read_only: true
     tmpfs: ["/tmp"]
+    ports:
+      - "127.0.0.1:${BROWSER_VNC_PORT:-5903}:5903"   # loopback VNC view (debug)
     networks: [agent-net]
     profiles: ["browser"]   # module (ADR-009); enable: docker compose --profile browser up
+    # Real GPU acceleration is what keeps the renderer strings genuine. Uncomment
+    # on an NVIDIA host; without a GPU Chrome falls back to software rendering,
+    # which reintroduces the SwiftShader tell.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
 
   # =========================================================================
   # vault-sidecar — gocryptfs live-FUSE unlock (corpus/05-identity/encrypted-vaults.md).

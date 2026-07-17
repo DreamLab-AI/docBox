@@ -1,0 +1,45 @@
+# docBox browser sidecar — the UNDETECTABLE path.
+#
+# This is NOT a headless image. Bot-detection (Cloudflare, DataDome, and the
+# like) fingerprints the chromium-headless-shell build and the SwiftShader
+# software renderer. This sidecar defeats that structurally, matching the
+# agentbox browsercontainer:
+#   1. real Google Chrome (not chromium-headless-shell),
+#   2. headful in a virtual X display (Xvfb), never --headless,
+#   3. GPU-accelerated (Vulkan/ANGLE/WebGPU) so WebGL/WebGPU renderer strings
+#      are real, not "Google SwiftShader".
+# Driven via chrome-devtools-mcp over CDP.
+#
+# LICENCE: Google Chrome is proprietary Google freeware, not open source. This
+# module is a DELIBERATE exception to the product's permissive-only rule
+# (operator decision: undetectability outweighs licence purity for browsing).
+# Chrome is pulled from Google's repo at build time, not vendored.
+#
+# Needs a GPU host for real acceleration; falls back to software rendering
+# (which reintroduces the SwiftShader tell) without one.
+FROM debian:bookworm-slim
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    DISPLAY=:2 \
+    CHROME_BIN=/opt/google/chrome/google-chrome
+
+# Real Google Chrome (stable) + a virtual display + a VNC view + node for the
+# chrome-devtools-mcp bridge. Mesa/Vulkan for GPU rasterisation via ANGLE.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl gnupg xvfb x11vnc dbus-x11 \
+      libvulkan1 mesa-vulkan-drivers \
+      fonts-liberation nodejs npm \
+ && curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
+ && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+ && apt-get update && apt-get install -y --no-install-recommends google-chrome-stable \
+ && npm install -g chrome-devtools-mcp@latest \
+ && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -u 10001 browser
+COPY --chown=browser:browser docker/launch-browser.sh /opt/launch-browser.sh
+RUN chmod +x /opt/launch-browser.sh
+USER browser
+
+# CDP on 9222; the chrome-devtools-mcp bridge and VNC are wired in compose.
+EXPOSE 9222 5903
+ENTRYPOINT ["/opt/launch-browser.sh"]

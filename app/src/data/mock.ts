@@ -189,7 +189,7 @@ export const modules: ModuleInfo[] = [
   // modules — optional capabilities
   { id: 'local-model', name: 'Local model', layer: 'module', state: 'on', service: 'local-model', gate: 'models.local.name', reach: 'core-api', applyClass: 'rebuild', summary: 'Private in-box text model (gpt-oss / Qwen) on the agent route switch.' },
   { id: 'local-ocr', name: 'Local OCR', layer: 'module', state: 'on', service: 'local-ocr', gate: 'ocr.route', reach: 'core-api', heavy: true, applyClass: 'session', summary: 'Private in-box vision OCR for documents; cloud routes are peers.' },
-  { id: 'browser-sidecar', name: 'Browser sidecar', layer: 'module', state: 'on', service: 'browser-sidecar', reach: 'sidecar', summary: 'Confined, VNC-observable Chromium for agent web work.' },
+  { id: 'browser-sidecar', name: 'Browser sidecar', layer: 'module', state: 'on', service: 'browser-sidecar', reach: 'sidecar', summary: 'Real headful Chrome (GPU, undetectable), VNC-observable, for agent web work.' },
   { id: 'vault', name: 'Vaults', layer: 'module', state: 'on', service: 'vault-sidecar', gate: 'vaults.engine', reach: 'sidecar', applyClass: 'rebuild', summary: 'gocryptfs per-project encrypted storage, unlocked via SSO.' },
   { id: 'ledger', name: 'Work ledger', layer: 'module', state: 'on', gate: 'agents.ledger', reach: 'core-api', applyClass: 'rebuild', summary: 'beads dependency-graphed work items behind a narrow interface.' },
   { id: 'tunnel', name: 'Tunnel', layer: 'module', state: 'off', service: 'cloudflared', gate: 'network.posture', reach: 'sidecar', applyClass: 'rebuild', summary: 'Zero-inbound exposure via cloudflared + Access (overlay).' },
