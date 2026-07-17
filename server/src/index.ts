@@ -16,7 +16,7 @@ import { parse as parseToml, stringify as stringifyToml } from 'smol-toml';
 // Single source of truth: the app's deterministic mock world.
 import {
   owners, sessions, agents, elements, actions, configOptions,
-  snapshots, beads, audit, vaults, documents, systemStatus, NOW,
+  snapshots, beads, audit, vaults, documents, modules, systemStatus, NOW,
 } from '../../app/src/data/mock.ts';
 import type { ActionEvent, ActionKind } from '../../app/src/domain/types.ts';
 
@@ -34,7 +34,7 @@ app.get('/api/world', (c) =>
   c.json({
     now: NOW,
     owners, sessions, agents, elements, actions,
-    config: configOptions, snapshots, beads, audit, vaults, documents,
+    config: configOptions, snapshots, beads, audit, vaults, documents, modules,
     system: systemStatus,
     timeWindow: [Math.min(...actions.map((a) => a.ts)), Math.max(...actions.map((a) => a.ts), NOW)],
   }),

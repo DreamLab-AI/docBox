@@ -3,7 +3,7 @@
 import type {
   Owner, SessionInfo, AgentInfo, ElementInfo, ActionEvent, ConfigOption,
   SnapshotInfo, BeadInfo, AuditRecord, VaultInfo, SystemStatus, ActionKind,
-  AgentKind, ElementKind, DocumentInfo,
+  AgentKind, ElementKind, DocumentInfo, ModuleInfo,
 } from '../domain/types';
 
 // Small seeded PRNG so every load renders the same world (replayable, like the real audit trail).
@@ -167,6 +167,33 @@ export const audit: AuditRecord[] = (() => {
     return rec;
   });
 })();
+
+// Module manifest (ADR-009): the honest inventory. Core is the spine; surfaces
+// are how people and agents interact; modules are optional capabilities.
+export const modules: ModuleInfo[] = [
+  // core — the governance and data spine
+  { id: 'control-plane', name: 'Control-plane server', layer: 'core', state: 'core', reach: 'spine', summary: 'Serves the world, config, events and documents over one API.' },
+  { id: 'domain-contract', name: 'Domain contract', layer: 'core', state: 'core', reach: 'spine', summary: 'The frozen types and adapter seam every surface reads.' },
+  { id: 'identity', name: 'Identity', layer: 'core', state: 'core', reach: 'spine', summary: 'Entra oid/tid seeds every action; the single attribution key.' },
+  { id: 'audit', name: 'Audit spine', layer: 'core', state: 'core', reach: 'spine', summary: 'Write-only hash-chained trail; the boundary all surfaces route through.' },
+  { id: 'config', name: 'Config + apply-class', layer: 'core', state: 'core', reach: 'spine', summary: 'One TOML source of truth; every change carries its apply-class.' },
+  { id: 'snapshots', name: 'Snapshot / rollback', layer: 'core', state: 'core', reach: 'spine', summary: 'Blue/green overhauls with a recovery partition and auto-rollback.' },
+
+  // surfaces — how humans and agents interact
+  { id: 'foreman', name: 'Foreman (web)', layer: 'surface', state: 'on', reach: 'core-api', summary: 'The admin control plane; the surface you are looking at.' },
+  { id: 'code-server', name: 'code-server', layer: 'surface', state: 'on', service: 'agent', reach: 'core-api', summary: 'Web VS Code; the primary-user workspace, served externally.' },
+  { id: 'companion', name: 'Companion extension', layer: 'surface', state: 'available', reach: 'extension', summary: 'Chat + documents as a code-server sidebar dock (ADR-007).' },
+  { id: 'chat-bubble', name: 'Chat bubble', layer: 'surface', state: 'available', reach: 'core-api', summary: 'deep-chat widget for embedding in a client dashboard.' },
+  { id: 'desktop', name: 'Streamed desktop', layer: 'surface', state: 'available', reach: 'sidecar', heavy: true, applyClass: 'rebuild', summary: 'Optional native Linux desktop under agentic control (ADR-009 candidate).' },
+
+  // modules — optional capabilities
+  { id: 'local-model', name: 'Local model', layer: 'module', state: 'on', service: 'local-model', gate: 'models.local.name', reach: 'core-api', applyClass: 'rebuild', summary: 'Private in-box text model (gpt-oss / Qwen) on the agent route switch.' },
+  { id: 'local-ocr', name: 'Local OCR', layer: 'module', state: 'on', service: 'local-ocr', gate: 'ocr.route', reach: 'core-api', heavy: true, applyClass: 'session', summary: 'Private in-box vision OCR for documents; cloud routes are peers.' },
+  { id: 'browser-sidecar', name: 'Browser sidecar', layer: 'module', state: 'on', service: 'browser-sidecar', reach: 'sidecar', summary: 'Confined, VNC-observable Chromium for agent web work.' },
+  { id: 'vault', name: 'Vaults', layer: 'module', state: 'on', service: 'vault-sidecar', gate: 'vaults.engine', reach: 'sidecar', applyClass: 'rebuild', summary: 'gocryptfs per-project encrypted storage, unlocked via SSO.' },
+  { id: 'ledger', name: 'Work ledger', layer: 'module', state: 'on', gate: 'agents.ledger', reach: 'core-api', applyClass: 'rebuild', summary: 'beads dependency-graphed work items behind a narrow interface.' },
+  { id: 'tunnel', name: 'Tunnel', layer: 'module', state: 'off', service: 'cloudflared', gate: 'network.posture', reach: 'sidecar', applyClass: 'rebuild', summary: 'Zero-inbound exposure via cloudflared + Access (overlay).' },
+];
 
 export const systemStatus: SystemStatus = {
   activeStack: 'blue',

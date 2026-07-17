@@ -14,7 +14,7 @@ The words below are the ones the code, the UI, and this corpus all use. The froz
 | **Agent** | A running unit of the agent layer (orchestrator or a spawned specialist). Carries owner, session, and parent, so lineage is reconstructable. |
 | **Element** | A thing acted upon: a file, service, config, model, or vault. |
 | **Action** | One recorded thing an agent did to an element at a time, with a status. The atom of the visualiser and the audit trail. |
-| **Apply-class** | How a configuration change lands: live, session, or rebuild. The system's core distinction. |
+| **Apply-class** | How a configuration change lands: hot, live, session, or rebuild. The system's core distinction (ADR-002, extended by ADR-008). |
 | **Snapshot / restore point** | A bracket around an overhaul: the system definition before, the outcome after, and the healthcheck verdict. |
 | **Bead** | A work item in the ledger, with dependencies, a gate, and an owner who asked for it. |
 | **Gate** | A condition a bead waits on: human approval, CI, or a PR merge. |

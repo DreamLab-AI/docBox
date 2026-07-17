@@ -13,7 +13,7 @@ architecture.
 3. **What OS are team members on?** Locked-down corporate Windows? Admin rights? WSL2 allowed by
    group policy?
 
-## The interface we haven't seen
+## Interface we haven't seen
 
 4. **What is the business dashboard built on** (React? server-rendered? iframe/CSP policies?)
    and can we inject a script-tag chat bubble, or do they embed a component from us?

@@ -11,8 +11,9 @@ import WorkTab from './features/work/WorkTab';
 import DocumentsTab from './features/documents/DocumentsTab';
 import ConfigTab from './features/config/ConfigTab';
 import OperationsTab from './features/operations/OperationsTab';
+import SystemTab from './features/system/SystemTab';
 
-type TabId = 'overview' | 'visualiser' | 'activity' | 'work' | 'documents' | 'config' | 'ops';
+type TabId = 'overview' | 'visualiser' | 'activity' | 'work' | 'documents' | 'config' | 'ops' | 'system';
 
 const TABS: { id: TabId; label: string; hint: string; render: () => JSX.Element }[] = [
   { id: 'overview',   label: 'Overview',      hint: 'System at a glance',            render: () => <OverviewTab /> },
@@ -22,6 +23,7 @@ const TABS: { id: TabId; label: string; hint: string; render: () => JSX.Element 
   { id: 'documents',  label: 'Documents',     hint: 'Uploads and OCR',               render: () => <DocumentsTab /> },
   { id: 'config',     label: 'Configuration', hint: 'Everything you can change',     render: () => <ConfigTab /> },
   { id: 'ops',        label: 'Operations',    hint: 'Snapshots, audit, vaults',      render: () => <OperationsTab /> },
+  { id: 'system',     label: 'System',        hint: 'Core, surfaces and modules',    render: () => <SystemTab /> },
 ];
 
 export function App() {

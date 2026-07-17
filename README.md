@@ -14,7 +14,7 @@ Two rules shape every decision, both from the client:
   bundles. The maximalist in-house machine (agentbox) stays in-house.
 - **Maintainability beats capability.** Fewest tools, one per job, narrow interfaces we own.
 
-## The whole system
+## System shape
 
 ```mermaid
 flowchart TB
@@ -42,22 +42,56 @@ flowchart TB
 The primary user never sees Foreman. Foreman is for the person who owns the box: provisioning,
 watching activity, approving or rolling back overhauls, reading the audit trail.
 
+## Core and modules
+
+The organising idea, and what keeps the product a distillation rather than a monolith: a **slim
+core** with **surfaces** and **modules** around it ([ADR-009](docs/reference/adr/ADR-009-slim-core-surfaces-as-modules.md)).
+
+```mermaid
+flowchart TB
+  subgraph core["CORE — governance and data spine (always on)"]
+    c1[control-plane server + domain contract]
+    c2[identity · audit · config · snapshot]
+  end
+  subgraph surfaces["Surfaces — how people and agents interact"]
+    s1[Foreman web] --- s2[code-server] --- s3[companion extension] --- s4["streamed desktop (candidate)"]
+  end
+  subgraph modules["Modules — optional capabilities, gated"]
+    m1[local model] --- m2[local OCR] --- m3[browser sidecar] --- m4[vaults] --- m5[ledger] --- m6[tunnel]
+  end
+  surfaces -->|route through| core
+  modules -->|gated by config + compose profile| core
+```
+
+- **Core** is the spine, not any UI: the server + frozen domain contract + the four invariants
+  (identity, audit, apply-class, snapshot). It stays small, structured, and always-on.
+- **Surfaces** are rich, but their state-changing actions route through the core contract, so the
+  audit boundary sits at the core. That is what lets a heavy surface (a streamed desktop) coexist
+  with a strict audit story.
+- **Modules** are three things and no more: a compose service (profile-gated when optional), a
+  config entry with an apply-class, and a reach to the core API. Adding a capability is adding a
+  module, never changing the core. The **System** tab renders this manifest live.
+
+This is a stated convention, not a plugin framework: we stop at the deployment seam, which is what
+keeps it a tenth of agentbox's surface.
+
 ## What is built
 
 | Layer | Status | Where |
 |---|---|---|
-| **Foreman UI** — six-tab control plane | Built, verified | `app/` |
-| **Control-plane server** — Hono, serves the world + SSE, TOML config | Built, verified | `server/` |
+| **Foreman UI** — eight-tab control plane | Built, verified | `app/` |
+| **Control-plane server** — Hono, serves the world + SSE, TOML config, documents | Built, verified | `server/` |
+| **Companion extension** — code-server sidebar (chat + documents) | Scaffolded, compile-checked | `extension/` |
 | **Container definitions** — Dockerfile, compose, scripts | Written (not built here; DinD) | `docker/`, `scripts/` |
 | Agent engine (pi), identity, tunnels, audit sidecar, vaults | Specified | `docs/`, `corpus/` |
 
 Foreman runs against a mock world by default (offline, deterministic) and, with
-`VITE_DATA_MODE=live`, hydrates from the control-plane server instead. The six feature modules
-never change: they read a synchronous adapter seam, and only that seam knows whether data is mock
-or live. That is the promise [ADR-001](docs/reference/adr/ADR-001-stack-and-mock-first.md) makes,
-now proven end to end.
+`VITE_DATA_MODE=live`, hydrates from the control-plane server instead. The feature modules never
+change when data goes live: they read a synchronous adapter seam, and only that seam knows whether
+data is mock or live. That is the promise [ADR-001](docs/reference/adr/ADR-001-stack-and-mock-first.md)
+makes, now proven end to end.
 
-## Foreman — the six tabs
+## Foreman — the tabs
 
 Each opens with plain guidance on when and why to use it.
 
@@ -70,8 +104,9 @@ Each opens with plain guidance on when and why to use it.
 | **Documents** | What has been uploaded, and did it stay private? | Upload scans/forms, watch OCR, confirm handwriting, see local vs cloud routing |
 | **Configuration** | What can I change, and how does it land? | Provision a client, change providers, plan a rebuild, adjust the layout |
 | **Operations** | Can I undo this, and prove what changed? | Roll back, verify the audit chain, unlock a vault |
+| **System** | What is the box made of, and what is on? | See the slim core, its surfaces and modules, and which are enabled |
 
-### The signature idea: apply-class
+### Signature idea: apply-class
 
 Every configuration option is one of four classes, shown as a coloured badge at the point of
 change, so the operator always knows whether a change is instant, waits for a new session, or

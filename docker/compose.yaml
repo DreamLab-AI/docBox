@@ -23,6 +23,16 @@
 # HOST PORTS are bound to 127.0.0.1 only (network.loopback_only). The box is
 # reached from outside through the cloudflared tunnel overlay (compose.tunnel.yaml),
 # never an open inbound port.
+#
+# CORE vs MODULES (ADR-009). Core services run by default: control-plane and
+# audit-sidecar. The code-server surface (agent) is on by default too. Every
+# optional MODULE service is behind a compose profile matching its module id, so
+# the default `docker compose up` brings up only the slim core, and a capability
+# is enabled explicitly:
+#     docker compose --profile local-model --profile browser --profile ocr up
+# Profiles in this file: local-model, ocr, browser, vault-fuse. The tunnel is the
+# compose.tunnel.yaml overlay; a streamed desktop is an ADR-009 candidate surface,
+# not yet a service here.
 
 name: docbox
 
@@ -183,6 +193,7 @@ services:
       # Loopback only; the agent reaches it in-network at http://local-model:11434.
       - "127.0.0.1:${LOCAL_MODEL_PORT:-11434}:11434"
     networks: [agent-net]
+    profiles: ["local-model"]   # module (ADR-009); enable: docker compose --profile local-model up
     # gpt-oss-120b (and vLLM throughput) needs a GPU. Uncomment on a GPU host:
     # deploy:
     #   resources:
@@ -271,6 +282,7 @@ services:
     read_only: true
     tmpfs: ["/tmp"]
     networks: [agent-net]
+    profiles: ["browser"]   # module (ADR-009); enable: docker compose --profile browser up
 
   # =========================================================================
   # vault-sidecar — gocryptfs live-FUSE unlock (corpus/05-identity/encrypted-vaults.md).

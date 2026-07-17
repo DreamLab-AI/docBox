@@ -19,6 +19,11 @@ Two governing rules, from the client steers:
   client needs the maximalist machine, sell them agentbox.
 - **Maintainability outranks capability.** Fewest tools, one per job, narrow interfaces we own.
 
+These rules take architectural shape as a **slim core with surfaces and modules around it**
+([ADR-009](../adr/ADR-009-slim-core-surfaces-as-modules.md)). The core is the governance and data
+spine; every other capability is a surface or a module that plugs in through config and a compose
+profile. Each open question below then resolves to "add or drop a module", not a core rewrite.
+
 ## Milestones
 
 ```mermaid

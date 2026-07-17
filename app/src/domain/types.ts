@@ -186,3 +186,34 @@ export interface DocumentInfo {
   confidence?: number;       // 0..1, lowest-field confidence when OCR is done
   fieldsForReview?: number;  // count of low-confidence fields routed to human review
 }
+
+// ── Module manifest (ADR-009) ────────────────────────────────────────────────
+// The single source of truth for what the system is made of: a slim core plus
+// surfaces and modules around it. This is a description that makes the
+// architecture legible and drives the System view — NOT a plugin runtime.
+
+/** Where a piece sits in the slim-core-modules model. */
+export type ModuleLayer =
+  | 'core'      // the governance and data spine; always on, never optional
+  | 'surface'   // how a human or agent interacts (web, editor, extension, desktop)
+  | 'module';   // an optional capability (model, ocr, sidecar, ledger, tunnel)
+
+/** Whether a piece is running. Core is always on; the rest can be off or available. */
+export type ModuleState =
+  | 'on'         // enabled and running
+  | 'off'        // present but disabled by its gate
+  | 'available'  // shippable but not part of this deployment yet
+  | 'core';      // always on (the spine)
+
+export interface ModuleInfo {
+  id: string;
+  name: string;
+  layer: ModuleLayer;
+  state: ModuleState;
+  summary: string;            // one plain sentence: what it is
+  gate?: string;              // config key / compose profile that toggles it (none for core)
+  service?: string;           // compose service name, if it runs as one
+  reach?: 'core-api' | 'sidecar' | 'extension' | 'spine'; // how it connects
+  heavy?: boolean;            // wants a GPU or real resources
+  applyClass?: ApplyClass;    // how turning it on/off lands
+}

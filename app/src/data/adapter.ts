@@ -8,7 +8,7 @@ import * as mock from './mock';
 import type {
   Owner, SessionInfo, AgentInfo, ElementInfo, ActionEvent, ConfigOption,
   SnapshotInfo, BeadInfo, AuditRecord, VaultInfo, SystemStatus, ApplyClass,
-  DocumentInfo,
+  DocumentInfo, ModuleInfo,
 } from '../domain/types';
 
 export interface World {
@@ -24,6 +24,7 @@ export interface World {
   audit: AuditRecord[];
   vaults: VaultInfo[];
   documents: DocumentInfo[];
+  modules: ModuleInfo[];
   system: SystemStatus;
 }
 
@@ -40,6 +41,7 @@ const mockWorld: World = {
   audit: mock.audit,
   vaults: mock.vaults,
   documents: mock.documents,
+  modules: mock.modules,
   system: mock.systemStatus,
 };
 
@@ -69,6 +71,7 @@ export const store = {
   audit: (): AuditRecord[] => world.audit,
   vaults: (): VaultInfo[] => world.vaults,
   documents: (): DocumentInfo[] => world.documents,
+  modules: (): ModuleInfo[] => world.modules,
   system: (): SystemStatus => world.system,
 
   ownerById: (id: string): Owner | undefined => world.owners.find((o) => o.id === id),

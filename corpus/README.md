@@ -1,5 +1,12 @@
 # Research Corpus
 
+> **Provenance, not current architecture.** This is the licence-verified research the design was
+> built from, dated to when each file was checked. The live design is the top-level
+> [`README.md`](../README.md) and the `docs/reference/` PRD/ADR/DDD set. Where a corpus file
+> weighs a candidate for a "single-purpose container" or names Claude Code as an engine option,
+> read it as the survey that led to the current decisions (pi as the engine, the slim
+> core-and-modules model in ADR-009), not as a description of what shipped.
+
 Licence-verified survey behind the design. Every claim was checked against the GitHub API or a raw
 LICENSE read on **2026-07-16**. Permissive licences only (MIT / Apache-2.0 / BSD) for anything
 shipped; each file flags the traps.
