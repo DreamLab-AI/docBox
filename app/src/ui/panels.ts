@@ -10,13 +10,14 @@ import VisualiserTab from '../features/visualiser/VisualiserTab';
 import ActivityTab from '../features/activity/ActivityTab';
 import WorkTab from '../features/work/WorkTab';
 import DocumentsTab from '../features/documents/DocumentsTab';
+import ClinicianPanel from '../features/clinician/ClinicianPanel';
 import ConfigTab from '../features/config/ConfigTab';
 import OperationsTab from '../features/operations/OperationsTab';
 import SystemTab from '../features/system/SystemTab';
 
 // The closed set of panel ids. This is the only place ids are minted; adding one
 // forces a matching component below (the `satisfies` check).
-export const PANEL_IDS = ['overview', 'visualiser', 'activity', 'work', 'documents', 'config', 'ops', 'system'] as const;
+export const PANEL_IDS = ['overview', 'visualiser', 'activity', 'work', 'documents', 'clinician', 'config', 'ops', 'system'] as const;
 export type PanelId = (typeof PANEL_IDS)[number];
 
 // The serialisable half of a panel — exactly what an agent may author or edit.
@@ -41,6 +42,7 @@ const COMPONENTS = {
   activity: ActivityTab,
   work: WorkTab,
   documents: DocumentsTab,
+  clinician: ClinicianPanel,
   config: ConfigTab,
   ops: OperationsTab,
   system: SystemTab,
@@ -53,6 +55,7 @@ const MANIFEST: PanelManifestEntry[] = [
   { id: 'activity',   label: 'Activity',      hint: 'Action feed and agent tree' },
   { id: 'work',       label: 'Work',          hint: 'The agent work ledger' },
   { id: 'documents',  label: 'Documents',     hint: 'Uploads and OCR' },
+  { id: 'clinician',  label: 'Clinician',     hint: 'Ask the patient record, with citations' },
   { id: 'config',     label: 'Configuration', hint: 'Everything you can change' },
   { id: 'ops',        label: 'Operations',    hint: 'Snapshots, audit, vaults' },
   { id: 'system',     label: 'System',        hint: 'Core, surfaces and modules' },

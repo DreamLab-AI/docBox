@@ -1,0 +1,129 @@
+/* Clinician feature — scoped styles for what inline styles can't do cleanly:
+   native control theming, hover/focus, and the standing left-border on timeline
+   rows. `clin-` prefix keeps it clear of the global token sheet. Reduced-motion is
+   handled globally in tokens.css. */
+
+.clin-input {
+  background: var(--bg-2); color: var(--fg-0);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 8px 12px; font-size: var(--fs-sm); font-family: inherit;
+}
+.clin-input:hover { border-color: var(--line-strong); }
+.clin-input::placeholder { color: var(--fg-2); }
+
+/* The echoed question above the answer. */
+.clin-question { margin: 0 0 var(--s-4); color: var(--fg-1); font-size: var(--fs-md); }
+
+/* Answer list: one sentence per row, each with its evidence beneath. */
+.clin-answer { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-3); }
+.clin-sentence {
+  padding: var(--s-3); background: var(--bg-2);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+}
+.clin-sentence-text { margin: 0 0 var(--s-2); font-size: var(--fs-md); line-height: var(--lh); }
+
+/* Evidence reveal: a quiet toggle that opens the exact quoted passage. */
+.clin-ev-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: 100px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  cursor: pointer; font-size: var(--fs-xs); font-weight: 600; font-family: inherit;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.clin-ev-toggle:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.clin-ev-list { list-style: none; margin: var(--s-3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+.clin-ev-item {
+  padding: var(--s-3); background: var(--bg-1);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+}
+.clin-quote {
+  margin: 6px 0 0; padding: 6px 12px;
+  border-left: 3px solid var(--teal);
+  color: var(--fg-0); font-family: var(--font-mono); font-size: var(--fs-sm);
+  background: color-mix(in srgb, var(--teal) 8%, transparent);
+}
+
+/* An unevidenced sentence says so plainly — it must never read as evidenced. */
+.clin-noev {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px; border-radius: 100px;
+  color: var(--fg-2); font-size: var(--fs-xs); font-weight: 600;
+  border: 1px dashed var(--line-strong); background: transparent;
+}
+
+/* Contradiction callout — the flagship. Amber frame, both sources named. */
+.clin-contra {
+  margin-top: var(--s-3); padding: var(--s-3);
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--amber) 10%, transparent);
+}
+.clin-contra-head { display: flex; align-items: center; gap: 8px; color: var(--amber); font-weight: 650; font-size: var(--fs-sm); }
+.clin-contra-note { margin: 6px 0 var(--s-2); font-size: var(--fs-sm); color: var(--fg-1); }
+.clin-contra-sides { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+.clin-contra-side { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2); font-size: var(--fs-sm); }
+.clin-contra-val { font-weight: 600; color: var(--fg-0); }
+
+/* Specialist pill (MDT). */
+.clin-chip {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px; border-radius: 100px; flex: none;
+  background: color-mix(in srgb, var(--violet) 14%, transparent);
+  color: var(--violet);
+  border: 1px solid color-mix(in srgb, var(--violet) 40%, transparent);
+  font-size: var(--fs-xs); font-weight: 600;
+}
+
+.clin-conf { color: var(--fg-2); font-size: var(--fs-xs); }
+
+.clin-docref { font-size: var(--fs-sm); }
+
+/* Standing pill. */
+.clin-standing {
+  display: inline-flex; align-items: center;
+  padding: 2px 9px; border-radius: 100px; flex: none;
+  border: 1px solid transparent; font-size: var(--fs-xs); font-weight: 600;
+}
+
+/* MDT list. */
+.clin-mdt { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+.clin-mdt-row {
+  display: flex; align-items: flex-start; gap: var(--s-3);
+  padding: var(--s-3); background: var(--bg-2);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+}
+.clin-mdt-body { flex: 1; min-width: 0; }
+.clin-mdt-summary { margin: 0; font-size: var(--fs-sm); }
+.clin-mdt-count { font-size: var(--fs-xs); }
+
+/* Honest gaps. */
+.clin-gaps {
+  margin-top: var(--s-4); padding: var(--s-3);
+  border: 1px dashed var(--line-strong); border-radius: var(--radius-sm);
+  background: var(--bg-1);
+}
+.clin-gaps-head { font-size: var(--fs-sm); font-weight: 600; color: var(--fg-1); margin-bottom: var(--s-2); }
+.clin-gaps-list { margin: 0; padding-left: var(--s-5); font-size: var(--fs-sm); color: var(--fg-2); }
+
+/* Timeline rows: standing carried by a left border AND the labelled pill. */
+.clin-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+.clin-claim {
+  padding: var(--s-3); background: var(--bg-2);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  border-left: 3px solid var(--line-strong);
+}
+.clin-claim-active { border-left-color: var(--green); }
+.clin-claim-superseded { border-left-color: var(--fg-2); }
+.clin-claim-refuted { border-left-color: var(--rose); }
+.clin-claim-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2); }
+.clin-claim-cat { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-2); }
+.clin-claim-label { font-weight: 600; font-size: var(--fs-sm); }
+.clin-claim-meta {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-3);
+  margin-top: 4px; font-size: var(--fs-xs); color: var(--fg-2);
+}
+.clin-supersedes { font-style: italic; }

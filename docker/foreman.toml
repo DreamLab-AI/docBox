@@ -65,11 +65,20 @@ endpoint = "http://local-model:11434/v1"   # apply-class: live
 # of the documents a client uploads.
 enabled = true            # apply-class: session
 route = "local"           # apply-class: session  — one of: local | openai | mistral | gemini
-local_model = "qwen2.5-vl-7b"   # apply-class: rebuild  — one of: qwen2.5-vl-7b | qwen3-vl | paddleocr-vl | deepseek-ocr
+local_model = "qwen2.5-vl-7b"   # apply-class: rebuild  — one of: qwen2.5-vl-7b | qwen3-vl | paddleocr-vl | deepseek-ocr | pixtral-12b
 endpoint = "http://local-ocr:11434/v1"   # apply-class: live  — used when route = local
 # No open model reads messy cursive reliably. Fields below the confidence
 # threshold go to a person; keep this on for handwriting.
 confidence_review = true  # apply-class: live
+
+[grounding]
+# Clinical grounding (main demonstrator, ADR-012): the NER + assertion sidecar
+# that turns OCR'd documents into evidence-linked Claims. rules mode is the
+# deterministic offline annotator (no model download); models mode serves the
+# pinned OpenMed checkpoints from the mounted weights volume on the demo box.
+enabled = false           # apply-class: session  — also gated by the compose profile `grounding`
+mode = "rules"            # apply-class: session  — one of: rules | models
+endpoint = "http://ner:8000"    # apply-class: live
 
 # ===========================================================================
 # Toolchain bundles — the three TOML-gated Dockerfile bundles

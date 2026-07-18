@@ -21,6 +21,10 @@ import {
 import type { ActionEvent, ActionKind } from '../../app/src/domain/types.ts';
 import { getEngine, type IdentityTuple } from './engine/client';
 import { getAuditEmitter, identityFromHeaders, tupleFor, auditEvent } from './audit/emit';
+import { CORPUS_DOCUMENTS } from '../../app/src/data/corpus.ts';
+import { getStore } from './corpus/store';
+import { getGrounding } from './corpus/grounding';
+import { getMesh } from './corpus/mesh';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const TOML_PATH = process.env.DOCBOX_TOML ?? join(here, '../../docker/foreman.toml');
@@ -115,6 +119,41 @@ app.post('/api/engine/prompt', async (c) => {
   await getAuditEmitter().emit(auditEvent('prompt', identity,
     { sessionId, ok: result.ok, chars: result.text.length }));
   return c.json(result);
+});
+
+// ── Clinical corpus (main demonstrator: PRD-010 grounding, PRD-011 mesh) ─────
+// The corpus seams mirror the engine seam: deterministic mocks by default, live
+// implementations behind env switches. The store seeds lazily from the synthetic
+// corpus on first touch, so the demo works offline with no ingestion step.
+async function ensureCorpus() {
+  const store = getStore();
+  if (!store.getRecord()) {
+    store.putDocuments(CORPUS_DOCUMENTS);
+    store.putRecord(await getGrounding().ground(CORPUS_DOCUMENTS));
+  }
+  return store;
+}
+
+app.get('/api/corpus/documents', async (c) => c.json((await ensureCorpus()).getDocuments()));
+
+app.get('/api/corpus/record', async (c) => c.json((await ensureCorpus()).getRecord()));
+
+app.post('/api/corpus/ask', async (c) => {
+  const body = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const question = typeof body.question === 'string' ? body.question.trim() : '';
+  if (!question) return c.json({ ok: false, error: 'question is required' }, 400);
+  const store = await ensureCorpus();
+  const record = store.getRecord()!;
+  // A Question and its CitedAnswer are one ReadingSession — the query-time unit
+  // of audit (DDD-004): both events attribute to the asking owner.
+  const owner = identityFromHeaders((n) => c.req.header(n));
+  const asked = tupleFor(owner, { sessionId: 'clinician', agentId: 'reading-mesh', actionId: 'question' });
+  await getAuditEmitter().emit(auditEvent('question_asked', asked, { chars: question.length }));
+  const session = await getMesh().ask(question, asked.ownerId, record, store);
+  await getAuditEmitter().emit(auditEvent('answer_cited',
+    { ...asked, actionId: session.id },
+    { sentences: session.answer.sentences.length, gaps: session.answer.gaps.length }));
+  return c.json({ ok: true, session });
 });
 
 // ── Configuration as TOML ────────────────────────────────────────────────────

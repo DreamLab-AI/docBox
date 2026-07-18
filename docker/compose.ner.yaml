@@ -1,0 +1,103 @@
+# docBox NER sidecar — compose fragment (ADR-012, ADR-009 module shape).
+#
+# ── HOW TO MERGE (for the queen) ─────────────────────────────────────────────
+# This file is a valid standalone overlay AND a paste-in source. Two options:
+#
+#   A. OVERLAY at run time (no edit to compose.yaml):
+#        docker compose -f docker/compose.yaml -f docker/compose.ner.yaml \
+#          --profile grounding up
+#      Top-level `networks` and `volumes` merge by name with the base file.
+#
+#   B. MERGE the block into docker/compose.yaml (preferred for one canonical
+#      file): copy the `ner:` service under `services:` there — it already
+#      defines the `&hardening` anchor and the `agent-net` network this uses —
+#      and add the `docbox-ner-models` volume to that file's `volumes:` map.
+#      Then delete the `x-hardening`, `networks` and `volumes` blocks below
+#      (they exist only so this fragment validates on its own).
+#
+# Also add the System-view module entry (ADR-009 ModuleInfo), so the System tab
+# lists it beside the other modules:
+#   { id: 'ner', name: 'Clinical NER', layer: 'module', state: 'off',
+#     summary: 'OpenMed/medspaCy clinical entity + assertion grounding sidecar',
+#     gate: 'grounding (compose profile) / [grounding].enabled',
+#     service: 'ner', reach: 'sidecar', heavy: true, applyClass: 'session' }
+#
+# Config gate (foreman.toml): add a [grounding] section mirroring [ocr], e.g.
+#   [grounding]
+#   enabled = true          # apply-class: session
+#   mode = "rules"          # apply-class: session  — one of: rules | models
+#   endpoint = "http://ner:8000"   # apply-class: live
+# ------------------------------------------------------------------------------
+
+name: docbox
+
+# Present only so this fragment validates standalone. On MERGE (option B) drop
+# this — compose.yaml already defines the same anchor.
+x-hardening: &hardening
+  security_opt:
+    - "no-new-privileges:true"
+  cap_drop:
+    - ALL
+  restart: unless-stopped
+
+services:
+
+  # =========================================================================
+  # ner — clinical NER + assertion sidecar (ADR-012). Reached by the control
+  # plane over HTTP at http://ner:8000; POST /ner {text} -> {entities:[...]}.
+  # Isolated on agent-net, loopback-bound host port for debug, hardened.
+  #
+  # NER_MODE=rules (default) runs the deterministic offline annotator — no model
+  # download, so the demo and CI have a working endpoint immediately. NER_MODE
+  # =models runs the OpenMed pinned checkpoints from the mounted weights volume
+  # (never baked into the image; pins recorded on the box — licence hygiene).
+  # =========================================================================
+  ner:
+    <<: *hardening
+    image: ${DOCBOX_REGISTRY:-docbox}/ner:${DOCBOX_TAG:-dev}
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ner
+    environment:
+      NER_MODE: "${NER_MODE:-rules}"                 # one of: rules | models
+      NER_MODEL_CONFIG: "/models/models.json"        # used only when NER_MODE=models
+      HF_HOME: "/models/hf-cache"                     # keep the HF cache on the volume
+    volumes:
+      # Weights + pinned config live here at runtime, out of the image and out of
+      # git. Empty for the rules path; the models path reads /models/models.json
+      # and the downloaded checkpoints from this volume.
+      - docbox-ner-models:/models
+    tmpfs: ["/tmp"]
+    ports:
+      # Loopback only; the control plane reaches it in-network at http://ner:8000.
+      - "127.0.0.1:${NER_PORT:-8000}:8000"
+    networks: [agent-net]
+    profiles: ["grounding"]   # module (ADR-009); enable: docker compose --profile grounding up
+    healthcheck:
+      # python-slim carries no curl; hit /health with the stdlib instead.
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    # The models path benefits from the DGX Spark GPU (FP4). The BERT-class
+    # checkpoints also run on CPU in unified memory; uncomment on a GPU host to
+    # place them on the GPU beside gpt-oss and the OCR model (ADR-015 — no
+    # memory-budget juggle at 128 GB).
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+# Present only so this fragment validates standalone. On MERGE (option B) these
+# fold into compose.yaml: `agent-net` already exists there; add
+# `docbox-ner-models` to its `volumes:` map.
+networks:
+  agent-net:
+    driver: bridge
+
+volumes:
+  docbox-ner-models:   # OpenMed weights + pinned models.json (models path); off-image, off-git

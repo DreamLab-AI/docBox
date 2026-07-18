@@ -1,0 +1,27 @@
+# docBox NER sidecar — Python dependencies.
+#
+# The default `rules` path (NER_MODE=rules) needs ONLY the web-serving core
+# below. It has no model download and no ML dependency, so the image stays small
+# and CI can run the endpoint offline.
+#
+# The `models` path (NER_MODE=models) additionally needs the ML group at the
+# bottom. Those lines are commented so a rules-only build stays light; uncomment
+# them (or install with `pip install -r requirements.txt -r requirements-models.txt`)
+# on the DGX Spark when serving the OpenMed checkpoints. On aarch64 these all have
+# prebuilt manylinux/aarch64 wheels; torch comes from the CUDA aarch64 index on
+# the appliance (see README).
+
+# ── web-serving core (both modes) ─────────────────────────────────────────────
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+
+# ── test tooling (dev only) ───────────────────────────────────────────────────
+# pytest==8.3.4
+# httpx==0.28.1            # FastAPI TestClient transport
+
+# ── models path (NER_MODE=models) — OpenMed checkpoints + medspaCy (ADR-012) ──
+# transformers==4.48.0
+# torch==2.5.1            # aarch64 CUDA build from NVIDIA's index on the DGX Spark
+# medspacy==1.3.1         # rule-based ConText/NegEx assertion + sectioniser
+# onnxruntime==1.20.1     # optional: ONNX serving instead of the torch pipeline

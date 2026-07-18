@@ -177,12 +177,12 @@ describe('config surface', () => {
 });
 
 describe('module manifest', () => {
-  it('has 6 core, 5 surface and 7 module entries', () => {
+  it('has 6 core, 5 surface and 8 module entries', () => {
     const byLayer = (layer: ModuleLayer) => mock.modules.filter((m) => m.layer === layer);
     expect(byLayer('core')).toHaveLength(6);
     expect(byLayer('surface')).toHaveLength(5);
-    expect(byLayer('module')).toHaveLength(7);
-    expect(mock.modules).toHaveLength(18);
+    expect(byLayer('module')).toHaveLength(8);
+    expect(mock.modules).toHaveLength(19);
   });
 
   it('marks every core module with the core state', () => {

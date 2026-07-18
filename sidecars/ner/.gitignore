@@ -1,0 +1,12 @@
+# Python build artefacts
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# A filled-in model config carries pinned revisions and lives on the box's
+# weights volume, not in git (licence hygiene). Only the example is committed.
+models.json
+
+# Downloaded weights / HF cache, if a developer points them here locally.
+models/
+hf-cache/

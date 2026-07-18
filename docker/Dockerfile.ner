@@ -1,0 +1,63 @@
+# syntax=docker/dockerfile:1.7
+#
+# docBox NER sidecar image — clinical named-entity recognition and assertion for
+# the grounding pipeline (ADR-012). A small FastAPI service the control plane
+# reaches over HTTP, in the ADR-009 module shape.
+#
+# TARGET PLATFORM: NVIDIA DGX Spark, ARM64 / aarch64 (ADR-015). The base image is
+# pinned by its MULTI-ARCHITECTURE INDEX digest below, so this one reference
+# resolves to the aarch64 layer on the appliance and to amd64 on the degraded
+# commodity path — no per-arch edit needed. The default `rules` path is pure
+# Python and architecture-neutral; the `models` path relies on aarch64 wheels
+# (transformers/medspacy/onnxruntime publish manylinux-aarch64; torch comes from
+# NVIDIA's aarch64 CUDA index on the appliance — see sidecars/ner/README.md).
+#
+# LICENCE HYGIENE: this image installs ONLY the permissive web-serving core (see
+# requirements.txt). The OpenMed checkpoints for the `models` path are Apache-2.0
+# but are NEVER baked in and NEVER committed — they mount at runtime from a volume
+# at /models, with their exact pins recorded beside them on the box. So the image
+# itself carries no model weights and no restricted content.
+#
+# This repo does not build images in CI (Docker-in-Docker with bind mounts is
+# broken in the dev environment). Build on a host or the appliance — see
+# docker/README.md.
+
+# python:3.11-slim-bookworm — multi-arch index digest (includes linux/arm64/v8).
+FROM python:3.11-slim-bookworm@sha256:b18992999dbe963a45a8a4da40ac2b1975be1a776d939d098c647482bcad5cba
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    NER_MODE=rules \
+    NER_MODEL_CONFIG=/models/models.json
+
+WORKDIR /app
+
+# Install the pinned web-serving core first for layer caching. requirements.txt
+# keeps the ML group commented, so a default `rules` image stays small and needs
+# no model download. For a `models` image, uncomment that group (or add the
+# models requirements) before building on the appliance.
+COPY sidecars/ner/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# Sidecar code.
+COPY sidecars/ner/annotator.py /app/annotator.py
+COPY sidecars/ner/models_backend.py /app/models_backend.py
+COPY sidecars/ner/app.py /app/app.py
+COPY sidecars/ner/models.example.json /app/models.example.json
+
+# Runtime weight mount point. The `models` path reads pinned checkpoints from a
+# volume mounted here (compose ner-models volume). Empty in the image; owned by
+# the unprivileged runtime user so a mounted volume is writable for the HF cache.
+RUN useradd -m -u 10002 ner \
+ && mkdir -p /models \
+ && chown -R ner:ner /app /models
+
+USER ner
+
+EXPOSE 8000
+
+# uvicorn serves app:app. NER_MODE (default rules) selects the backend; in
+# `models` mode the app loads the pinned checkpoints at startup and fails fast on
+# a bad or missing pin.
+ENTRYPOINT ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

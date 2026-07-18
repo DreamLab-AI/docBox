@@ -31,7 +31,7 @@ describe('SystemTab', () => {
     expect(screen.getByText('Module')).toBeInTheDocument();
     expect(
       screen.getByText((_content, el) =>
-        el?.textContent === '6 core · 5 surfaces · 7 modules · 5 off/available'),
+        el?.textContent === '6 core · 5 surfaces · 8 modules · 6 off/available'),
     ).toBeInTheDocument();
   });
 
@@ -56,14 +56,14 @@ describe('SystemTab', () => {
     expect(within(card).getByText('Rebuild')).toBeInTheDocument();
   });
 
-  it('lists all seven modules with the heavy OCR module GPU-marked and apply-classes shown', () => {
+  it('lists all eight modules with the heavy ones GPU-marked and apply-classes shown', () => {
     render(<SystemTab />);
     const card = listCard('Modules');
-    for (const name of ['Local model', 'Local OCR', 'Browser sidecar', 'Vaults', 'Work ledger', 'Tunnel', 'QE fleet']) {
+    for (const name of ['Local model', 'Local OCR', 'Clinical NER', 'Browser sidecar', 'Vaults', 'Work ledger', 'Tunnel', 'QE fleet']) {
       expect(within(card).getByText(name)).toBeInTheDocument();
     }
-    // Local OCR is the heavy module.
-    expect(within(card).getByText('GPU')).toBeInTheDocument();
+    // Local OCR and Clinical NER are the heavy modules.
+    expect(within(card).getAllByText('GPU').length).toBeGreaterThanOrEqual(2);
     // Session apply-class appears on Local OCR and the QE fleet module.
     expect(within(card).getAllByText('Next session').length).toBeGreaterThanOrEqual(1);
     expect(within(card).getAllByText('Rebuild').length).toBeGreaterThanOrEqual(4);
@@ -73,9 +73,9 @@ describe('SystemTab', () => {
 
   it('shows each module state as a word, not colour alone', () => {
     render(<SystemTab />);
-    // Modules: Tunnel is off, QE fleet is available, the other five are on.
+    // Modules: Tunnel and Clinical NER are off, QE fleet is available, the rest on.
     const modules = listCard('Modules');
-    expect(within(modules).getByText('off')).toBeInTheDocument();
+    expect(within(modules).getAllByText('off').length).toBeGreaterThanOrEqual(2);
     expect(within(modules).getByText('available')).toBeInTheDocument();
     expect(within(modules).getAllByText('on').length).toBeGreaterThanOrEqual(5);
 

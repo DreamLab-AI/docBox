@@ -98,8 +98,14 @@ similarity ([ADR-011](../adr/ADR-011-context-native-retrieval.md)). Two `main`-o
 demo's ceiling: the permissive-only rule is relaxed for this non-distributed one-shot showcase, so
 it may use restrictively-licensed terminology (SNOMED/UMLS) and models on the box — never in this
 public repo; and it targets an NVIDIA DGX Spark, whose 128 GB of unified memory lets the whole local
-stack co-reside ([ADR-015](../adr/ADR-015-target-platform-dgx-spark.md)). The running demonstrator is
-built next, on the spine above.
+stack co-reside ([ADR-015](../adr/ADR-015-target-platform-dgx-spark.md)).
+
+The first vertical slice is built and tested, offline-first in the codebase's mock-first shape: the
+synthetic patient corpus with seeded contradictions (`app/src/data/corpus.ts`), the grounding and
+reading-mesh seams with deterministic defaults and injectable live paths (`server/src/corpus/`), the
+Clinician tab (`app/src/features/clinician/`), the corpus routes and their audit events, and the NER
+sidecar with a working offline rules mode (`sidecars/ner/`). What remains is host-runtime wiring:
+aarch64 image builds, model downloads for the models mode, and a live `pi`.
 
 ## Feature areas and their homes
 
@@ -116,8 +122,8 @@ built next, on the spine above.
 | Agent engine | embedded pi | M3 |
 | Chat bubble | client dashboard | M7 |
 
-The tab list is eight (Overview, Visualiser, Activity, Work, Documents, Configuration, Operations,
-System); App.tsx and the README are canonical for the current set.
+The tab list is nine (Overview, Visualiser, Activity, Work, Documents, Clinician, Configuration,
+Operations, System); App.tsx and the README are canonical for the current set.
 
 ## What we deliberately defer
 

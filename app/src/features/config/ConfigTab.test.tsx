@@ -41,7 +41,7 @@ describe('ConfigTab — staging edits', () => {
     render(<ConfigTab />);
     // A live change (Anthropic toggle) and a rebuild change (embedded model).
     fireEvent.click(screen.getAllByRole('switch')[0]);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'gpt-oss-20b' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Embedded model' }), { target: { value: 'gpt-oss-20b' } });
 
     // Two distinct apply-classes each with a count of one.
     expect(screen.getAllByText('× 1')).toHaveLength(2);
@@ -78,7 +78,7 @@ describe('ConfigTab — applying, resetting and discarding', () => {
   it('discards every staged edit at once', () => {
     render(<ConfigTab />);
     fireEvent.click(screen.getAllByRole('switch')[0]);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'gpt-oss-20b' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Embedded model' }), { target: { value: 'gpt-oss-20b' } });
     expect(screen.getByText(/2 staged changes/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
     expect(screen.queryByText(/staged change/)).toBeNull();
@@ -88,7 +88,7 @@ describe('ConfigTab — applying, resetting and discarding', () => {
 describe('ConfigTab — rebuild plan', () => {
   it('surfaces the review action and lists the TOML from→to in the plan modal', () => {
     render(<ConfigTab />);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'gpt-oss-20b' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Embedded model' }), { target: { value: 'gpt-oss-20b' } });
 
     const review = screen.getByRole('button', { name: /Review rebuild plan \(1\)/ });
     fireEvent.click(review);
@@ -104,7 +104,7 @@ describe('ConfigTab — rebuild plan', () => {
 
   it('cancels the plan without applying', () => {
     render(<ConfigTab />);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'gpt-oss-20b' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Embedded model' }), { target: { value: 'gpt-oss-20b' } });
     fireEvent.click(screen.getByRole('button', { name: /Review rebuild plan \(1\)/ }));
     const dialog = screen.getByRole('dialog', { name: 'Rebuild plan' });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
@@ -115,7 +115,7 @@ describe('ConfigTab — rebuild plan', () => {
 
   it('closes the plan on Escape and on backdrop click before it starts', () => {
     render(<ConfigTab />);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'gpt-oss-20b' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Embedded model' }), { target: { value: 'gpt-oss-20b' } });
 
     // Escape closes while idle.
     fireEvent.click(screen.getByRole('button', { name: /Review rebuild plan \(1\)/ }));
@@ -133,7 +133,7 @@ describe('ConfigTab — rebuild plan', () => {
     vi.useFakeTimers();
     try {
       render(<ConfigTab />);
-      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'gpt-oss-20b' } });
+      fireEvent.change(screen.getByRole('combobox', { name: 'Embedded model' }), { target: { value: 'gpt-oss-20b' } });
       fireEvent.click(screen.getByRole('button', { name: /Review rebuild plan \(1\)/ }));
       const dialog = screen.getByRole('dialog', { name: 'Rebuild plan' });
       fireEvent.click(within(dialog).getByRole('button', { name: 'Start rebuild' }));
@@ -205,16 +205,16 @@ describe('ConfigTab — controls per option type', () => {
     // enum with ≤4 options → segmented radiogroup
     expect(screen.getAllByRole('radiogroup').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('radio').length).toBeGreaterThan(0);
-    // enum with >4 options → select (models.local.name)
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    // enum with >4 options → select (models.local.name and ocr.local_model)
+    expect(screen.getAllByRole('combobox').length).toBeGreaterThanOrEqual(2);
     // string → text input (the local endpoint), editable
     const endpoint = screen.getByDisplayValue('http://local-model:11434/v1');
     fireEvent.change(endpoint, { target: { value: 'http://elsewhere:1234/v1' } });
     expect(screen.getByDisplayValue('http://elsewhere:1234/v1')).toBeInTheDocument();
 
     // enum select is editable (models.local.name has >4 options).
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'qwen3-4b' } });
-    expect(screen.getByRole('combobox')).toHaveValue('qwen3-4b');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Embedded model' }), { target: { value: 'qwen3-4b' } });
+    expect(screen.getByRole('combobox', { name: 'Embedded model' })).toHaveValue('qwen3-4b');
 
     // secret → masked by default, reveal toggles the value.
     expect(screen.getByDisplayValue('•'.repeat(12))).toBeInTheDocument();
@@ -233,7 +233,7 @@ describe('ConfigTab — controls per option type', () => {
     const labelId = toggle.getAttribute('aria-labelledby')!;
     expect(document.getElementById(labelId)?.textContent).toBeTruthy();
 
-    expect(screen.getByRole('combobox')).toHaveAttribute('aria-labelledby');
+    expect(screen.getAllByRole('combobox')[0]).toHaveAttribute('aria-labelledby');
     expect(screen.getAllByRole('radiogroup')[0]).toHaveAttribute('aria-labelledby');
   });
 

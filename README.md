@@ -32,10 +32,24 @@ permissive-only rule that defines `vanilla`: it may run restrictively-licensed c
 public repo — and it targets an NVIDIA DGX Spark, whose 128 GB of unified memory runs the whole
 local stack at once.
 
-This is specified, not yet built: the [demonstrator brief](docs/demonstrator-brief.md) and its
-PRD/ADR/DDD set (start at [PRD-008](docs/reference/prd/PRD-008-clinician-demonstrator.md)) are the
-plan; the running demonstrator is the next build on the spine described below. The `vanilla` branch
+The demonstrator's first vertical slice is **built and tested**: the synthetic patient corpus with
+its seeded contradictions, the grounding and reading-mesh seams (deterministic offline defaults,
+injectable live paths), the **Clinician** tab below, and the NER sidecar (offline rules mode
+working; OpenMed models mode configured for the target box). The [demonstrator
+brief](docs/demonstrator-brief.md) and its PRD/ADR/DDD set (start at
+[PRD-008](docs/reference/prd/PRD-008-clinician-demonstrator.md)) are the plan it realises; what
+remains is host-runtime wiring (image builds, model downloads, live `pi`). The `vanilla` branch
 keeps the generic sandbox without this use case.
+
+The flagship scene — a cited answer that surfaces the seeded medication contradiction instead of
+smoothing it over, each sentence expandable to the exact source passage:
+
+![The Clinician tab: a cited answer surfacing the discharge-versus-GP-repeat medication contradiction, with the quoted source passage expanded](docs/images/clinician-contradiction.png)
+
+| | |
+|---|---|
+| ![Foreman Overview tab: sessions, agents, work items, the action mix and per-owner attribution](docs/images/foreman-overview.png) | ![System tab orbit map: the slim core with surfaces and modules around it, including the Clinical NER module](docs/images/system-modules.png) |
+| *Foreman, the operator's control plane* | *The System map — Clinical NER now orbits the core* |
 
 ## System shape
 
@@ -108,6 +122,9 @@ keeps it a tenth of agentbox's surface.
 | **Container definitions** — control-plane / audit / vault / browser images, egress firewall, oauth2-proxy | Written, compose-validated (images build on a host; DinD) | `docker/`, `scripts/` |
 | **Agent engine** — typed seam + deterministic mock; live `pi` over RPC (stdio) | Seam + mock built, tested | `server/src/engine/` |
 | **Audit trail** — control plane emits attributed events → write-only, hash-chained sidecar | Built, tested; actor from oauth2-proxy headers | `server/src/audit/` |
+| **Clinical corpus** — synthetic patient, evidence-linked record, grounding + reading-mesh seams | Built, tested (deterministic offline; live paths injectable) | `app/src/data/corpus.ts`, `server/src/corpus/` |
+| **Clinician surface** — cited answers, contradiction surfacing, record timeline | Built, tested | `app/src/features/clinician/` |
+| **NER sidecar** — FastAPI clinical annotator (offline rules mode; OpenMed models mode) | Built; rules mode verified, image builds on a host | `sidecars/ner/`, `docker/Dockerfile.ner` |
 | Identity (Entra + oauth2-proxy), tunnels, vaults, chat bubble | Specified; config written, host-runtime | `docs/`, `docker/` |
 
 Foreman runs against a mock world by default (offline, deterministic) and, with
@@ -127,6 +144,7 @@ Each opens with plain guidance on when and why to use it.
 | **Activity** | What is happening right now? | Follow a live session, audit one agent |
 | **Work** | What is the agent doing over the long run? | Track overhaul work, approve a gated overhaul |
 | **Documents** | What has been uploaded, and did it stay private? | Upload scans/forms, watch OCR, confirm handwriting, see local vs cloud routing |
+| **Clinician** | What does the record say, and on what evidence? | Ask the synthetic patient's record, expand citations to source passages, reconcile the surfaced contradiction |
 | **Configuration** | What can I change, and how does it land? | Provision a client, change providers, plan a rebuild, adjust the layout |
 | **Operations** | Can I undo this, and prove what changed? | Roll back, verify the audit chain, unlock a vault |
 | **System** | What is the box made of, and what is on? | See the slim core, its surfaces and modules, and which are enabled |

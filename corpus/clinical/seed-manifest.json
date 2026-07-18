@@ -1,0 +1,77 @@
+{
+  "$comment": "Machine-readable seed manifest for the synthetic patient corpus (PRD-009). Maps each seeded scenario S1-S6 to the SourceDocument ids in app/src/data/corpus.ts that carry it, so PRD-008's demo script lands on cue and PRD-010's detection can be scored against known truth. The shipped demo corpus is the deterministic one in app/src/data/corpus.ts; this manifest names what it contains.",
+  "patient": "Margaret Aldington (synthetic)",
+  "source": "app/src/data/corpus.ts",
+  "builtAt": "2023-09-02",
+  "documents": [
+    { "id": "src-referral", "name": "GP referral to cardiology.pdf", "kind": "referral", "handwriting": false },
+    { "id": "src-clinic", "name": "Cardiology clinic letter.pdf", "kind": "clinic_letter", "handwriting": false },
+    { "id": "src-clinic-dup", "name": "Cardiology clinic letter (copy).pdf", "kind": "clinic_letter", "handwriting": false },
+    { "id": "src-lab-mar", "name": "U&E result 10 Mar.pdf", "kind": "lab_report", "handwriting": false },
+    { "id": "src-lab-mar-corrected", "name": "U&E result 10 Mar CORRECTED.pdf", "kind": "lab_report", "handwriting": false },
+    { "id": "src-discharge", "name": "Discharge summary.pdf", "kind": "discharge", "handwriting": false },
+    { "id": "src-gp-repeat", "name": "GP repeat medication list.pdf", "kind": "medication_list", "handwriting": false },
+    { "id": "src-angio", "name": "Angiography report.pdf", "kind": "radiology", "handwriting": false },
+    { "id": "src-drugchart", "name": "Ward drug chart (scan).jpg", "kind": "gp_notes", "handwriting": true }
+  ],
+  "seeds": [
+    {
+      "id": "S1",
+      "name": "Corrected laboratory result supersedes the earlier one",
+      "flagship": false,
+      "description": "A raised potassium is later corrected to normal on an amended report; recency and validity govern the supersession, not text similarity.",
+      "documents": ["src-lab-mar", "src-lab-mar-corrected"],
+      "claims": ["c-k-high", "c-k-normal"],
+      "supersession": { "supersedes": "c-k-high", "by": "c-k-normal" },
+      "shows": "Supersession: the newer corrected value wins; the superseded value is retained, not deleted."
+    },
+    {
+      "id": "S2",
+      "name": "Discharge medication contradicts the GP repeat list",
+      "flagship": true,
+      "description": "The June discharge summary records amlodipine 10mg while the September GP repeat list still shows 5mg; the two are surfaced as a contradiction, never silently reconciled.",
+      "documents": ["src-discharge", "src-gp-repeat"],
+      "claims": ["c-amlo-10-discharge", "c-amlo-5-gprepeat"],
+      "contradictions": ["ct-amlo-dose"],
+      "shows": "Contradiction surfacing — the flagship demo moment (PRD-008 act 5)."
+    },
+    {
+      "id": "S3",
+      "name": "Duplicated clinic letter",
+      "flagship": false,
+      "description": "A near-identical copy of the cardiology clinic letter; de-duplicated without losing either document's provenance.",
+      "documents": ["src-clinic", "src-clinic-dup"],
+      "claims": ["c-htn", "c-amlo-10-clinic", "c-allergy-pen"],
+      "shows": "De-duplication that keeps both documents' provenance intact."
+    },
+    {
+      "id": "S4",
+      "name": "Referral to clinic to discharge cross-reference chain",
+      "flagship": false,
+      "description": "The dose is set at referral (amlodipine 5mg), raised at the cardiology clinic (10mg), and carried at discharge (10mg); the chain is followed across three documents with attribution.",
+      "documents": ["src-referral", "src-clinic", "src-discharge"],
+      "claims": ["c-amlo-5-referral", "c-amlo-10-clinic", "c-amlo-10-discharge"],
+      "shows": "Cross-document reference following and attribution along a referral-to-discharge chain."
+    },
+    {
+      "id": "S5",
+      "name": "Working diagnosis later refuted",
+      "flagship": false,
+      "description": "Stable angina is recorded at discharge as a working diagnosis, then not supported by the later CT coronary angiography; the Claim is refuted and retained, not removed.",
+      "documents": ["src-discharge", "src-angio"],
+      "claims": ["c-angina"],
+      "shows": "A Claim's mutability: refuted and retained, not deleted."
+    },
+    {
+      "id": "S6",
+      "name": "Allergy present in some documents, absent from others",
+      "flagship": false,
+      "description": "A penicillin allergy is recorded in the clinic letter and the discharge summary, but absent from the earlier referral (which records no known drug allergies) and from the GP repeat list; absence is a finding, and the allergy is weighted to persist.",
+      "documents": ["src-clinic", "src-discharge", "src-referral", "src-gp-repeat"],
+      "claims": ["c-allergy-pen"],
+      "present_in": ["src-clinic", "src-discharge"],
+      "absent_in": ["src-referral", "src-gp-repeat"],
+      "shows": "Absence as a finding; staleness weighting (allergies persist)."
+    }
+  ]
+}

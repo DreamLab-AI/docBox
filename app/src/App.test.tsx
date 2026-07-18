@@ -7,7 +7,7 @@ import { App } from './App';
 import { IS_LIVE } from './data/live';
 import { store } from './data/adapter';
 
-const TAB_LABELS = ['Overview', 'Visualiser', 'Activity', 'Work', 'Documents', 'Configuration', 'Operations', 'System'];
+const TAB_LABELS = ['Overview', 'Visualiser', 'Activity', 'Work', 'Documents', 'Clinician', 'Configuration', 'Operations', 'System'];
 
 // Some feature tabs (e.g. Configuration) render their own nested tablist, so tab
 // queries must be scoped to the shell's tablist to avoid counting sub-tabs.
@@ -35,11 +35,11 @@ describe('App shell', () => {
     expect(IS_LIVE).toBe(false);
   });
 
-  it('renders a tablist with all 8 sections', () => {
+  it('renders a tablist with all 9 sections', () => {
     render(<App />);
     expect(screen.getByRole('tablist', { name: 'Control plane sections' })).toBeInTheDocument();
     const tabs = shellTabs().getAllByRole('tab');
-    expect(tabs).toHaveLength(8);
+    expect(tabs).toHaveLength(9);
     expect(tabs.map((t) => t.textContent)).toEqual(TAB_LABELS);
   });
 

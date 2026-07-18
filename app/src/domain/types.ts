@@ -217,3 +217,149 @@ export interface ModuleInfo {
   heavy?: boolean;            // wants a GPU or real resources
   applyClass?: ApplyClass;    // how turning it on/off lands
 }
+
+// ── Clinical corpus domain (DDD-004, main demonstrator) ──────────────────────
+// The typed, evidence-linked record built from one synthetic patient's documents.
+// Ingestion writes Claims; query time reads them. Every Claim carries provenance
+// back to exact source characters, so an answer can cite what it stands on. This
+// is the main-branch demonstrator's contract; vanilla does not ship it.
+
+/** The deliberately-seeded scenarios (PRD-009) the demo is built to surface. */
+export type SeedId = 'S1' | 'S2' | 'S3' | 'S4' | 'S5' | 'S6';
+
+/** A span of characters in a SourceDocument's frozen text: the citation primitive.
+ *  quote must equal text.slice(start, end) in the referenced document (DDD-004 inv. 2). */
+export interface EvidenceSpan {
+  docId: string;      // SourceDocument.id
+  start: number;      // character offset, inclusive
+  end: number;        // character offset, exclusive
+  quote: string;      // the exact text at [start, end)
+}
+
+/** A confidence score plus the method that produced it. Descriptive, never a licence to hide. */
+export interface Confidence {
+  score: number;      // 0..1
+  method: string;     // e.g. 'ocr+ner', 'schema-llm', 'reconciled'
+}
+
+/** The temporal window a Claim speaks for. Supersession is decided on this. */
+export interface ValidityInterval {
+  from: number;                                  // epoch ms, effective-from
+  to?: number;                                   // epoch ms, effective-to (open if absent)
+  precision: 'day' | 'month' | 'year' | 'unknown';
+}
+
+/** The FHIR R4 resource + element a Claim's value normalises to, with optional coding.
+ *  system is undefined when uncoded; on main it may be SNOMED/UMLS/ICD-10, else dm+d. */
+export interface FhirMapping {
+  resource:
+    | 'Condition'
+    | 'MedicationStatement'
+    | 'Observation'
+    | 'AllergyIntolerance'
+    | 'Encounter'
+    | 'Procedure';
+  element: string;                               // e.g. 'code', 'medicationCodeableConcept'
+  system?: 'dm+d' | 'SNOMED' | 'UMLS' | 'ICD-10' | 'LOINC';
+  code?: string;
+  display?: string;
+}
+
+export type ClaimCategory = 'medication' | 'lab' | 'diagnosis' | 'allergy' | 'encounter' | 'procedure';
+export type ClaimStanding = 'active' | 'superseded' | 'refuted';
+
+/** A single typed, evidence-linked assertion derived from a SourceDocument.
+ *  Named Claim because its standing (not its content) can change: it can be
+ *  contradicted or superseded by another document. */
+export interface Claim {
+  id: string;
+  category: ClaimCategory;
+  label: string;                                 // human line, e.g. "Amlodipine 10mg once daily"
+  value: string;                                 // normalised value
+  fhir: FhirMapping;
+  evidence: EvidenceSpan;                        // the source span that backs it (DDD-004 inv. 1)
+  confidence: Confidence;
+  validity: ValidityInterval;
+  standing: ClaimStanding;
+  supersedesClaimId?: string;                    // set when this Claim supersedes another
+  seedId?: SeedId;                               // which seeded scenario planted it (demo)
+}
+
+/** A detected conflict between exactly two Claims. Surfaced, never silently resolved. */
+export interface Contradiction {
+  id: string;
+  claimIds: [string, string];
+  kind: 'medication' | 'diagnosis' | 'allergy' | 'lab';
+  note: string;                                  // one line: what conflicts
+  seedId?: SeedId;
+}
+
+export type SourceDocKind =
+  | 'referral'
+  | 'clinic_letter'
+  | 'discharge'
+  | 'lab_report'
+  | 'radiology'
+  | 'medication_list'
+  | 'gp_notes'
+  | 'econsult'
+  | 'consent';
+
+/** One ingested artefact with frozen, char-addressable text (DDD-004 SourceDocument root). */
+export interface SourceDocument {
+  id: string;
+  documentId?: string;                           // joins DocumentInfo (Documents tab) if uploaded there
+  name: string;
+  kind: SourceDocKind;
+  provenance: string;                            // e.g. "Cardiology outpatient clinic"
+  date: number;                                  // epoch ms, the document's own date
+  text: string;                                  // frozen OCR/extracted text, addressable by offset
+  ocrRoute: ProcessingRoute;
+  handwriting: boolean;
+  seedId?: SeedId;
+}
+
+/** The reconciled, FHIR-shaped view assembled from all Claims, for one patient. */
+export interface LongitudinalRecord {
+  patientLabel: string;                          // synthetic patient display name
+  claims: Claim[];
+  contradictions: Contradiction[];
+  documentIds: string[];                         // SourceDocument ids that fed it
+  builtAt: number;
+}
+
+/** The five bounded reading-mesh Specialists (PRD-011). Fixed set, no dynamic spawning. */
+export const SPECIALISTS = ['medications', 'labs', 'diagnoses', 'chronology', 'correspondence'] as const;
+export type SpecialistId = (typeof SPECIALISTS)[number];
+
+/** One Specialist's contribution to answering a Question. */
+export interface SpecialistFinding {
+  specialist: SpecialistId;
+  summary: string;
+  claimIds: string[];                            // Claims this Specialist read
+  evidence: EvidenceSpan[];
+}
+
+/** One sentence of an answer, with the evidence that supports it (>=1, or not emitted). */
+export interface CitedSentence {
+  text: string;
+  evidence: EvidenceSpan[];
+  contradictionId?: string;                      // set when the sentence surfaces a Contradiction
+}
+
+/** An answer whose every sentence carries EvidenceSpans (DDD-004 inv. 3). */
+export interface CitedAnswer {
+  sentences: CitedSentence[];
+  gaps: string[];                                // what the record could not evidence
+}
+
+/** One Question, the findings that addressed it, and the CitedAnswer.
+ *  The query-time unit of work and of audit (DDD-004 ReadingSession root). */
+export interface ReadingSession {
+  id: string;
+  question: string;
+  askedBy: string;                               // owner id
+  askedAt: number;
+  findings: SpecialistFinding[];
+  answer: CitedAnswer;
+}

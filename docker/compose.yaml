@@ -286,6 +286,50 @@ services:
     #           capabilities: [gpu]
 
   # =========================================================================
+  # ner — clinical NER + assertion sidecar (ADR-012; main demonstrator). The
+  # control plane reaches it in-network: POST http://ner:8000/ner {text} ->
+  # {entities:[{text,label,start,end,score}]}. NER_MODE=rules (default) is the
+  # deterministic offline annotator — no model download, working endpoint for
+  # demo and CI. NER_MODE=models serves the pinned OpenMed checkpoints from the
+  # mounted weights volume (never baked into the image or committed — licence
+  # hygiene; pins live on the box). See docker/compose.ner.yaml for the
+  # standalone overlay form and sidecars/ner/ for the service.
+  # =========================================================================
+  ner:
+    <<: *hardening
+    image: ${DOCBOX_REGISTRY:-docbox}/ner:${DOCBOX_TAG:-dev}
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ner
+    environment:
+      NER_MODE: "${NER_MODE:-rules}"                 # one of: rules | models
+      NER_MODEL_CONFIG: "/models/models.json"        # used only when NER_MODE=models
+      HF_HOME: "/models/hf-cache"                     # keep the HF cache on the volume
+    volumes:
+      - docbox-ner-models:/models
+    tmpfs: ["/tmp"]
+    ports:
+      - "127.0.0.1:${NER_PORT:-8000}:8000"
+    networks: [agent-net]
+    profiles: ["grounding"]   # module (ADR-009); enable: docker compose --profile grounding up
+    healthcheck:
+      # python-slim carries no curl; hit /health with the stdlib instead.
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    # The models path benefits from the DGX Spark GPU (FP4); the BERT-class
+    # checkpoints also run on CPU in unified memory (ADR-015).
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # =========================================================================
   # audit-sidecar — write-only, append-only, DUAL-HOMED. Ingest (POST /v1/events)
   # is served on agent-net; the audit volume and any read/query path live on
   # audit-net where no agent can reach. The append-only inode (chattr +a) on the
@@ -422,3 +466,4 @@ volumes:
   docbox-pnpm-store:  # shared pnpm content store (cache, not a plane)
   docbox-uv-store:    # shared uv package cache (cache, not a plane)
   docbox-model-cache: # downloaded local-model weights (cache, not a plane)
+  docbox-ner-models:  # OpenMed weights + pinned models.json (models path); off-image, off-git

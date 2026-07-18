@@ -1,0 +1,46 @@
+{
+  "_comment": [
+    "OpenMed pinned-checkpoint set for NER_MODE=models (ADR-012). Copy this file",
+    "to the weights volume as /models/models.json on the DGX Spark, then set each",
+    "'revision' to the exact commit SHA resolved at download time. The backend",
+    "refuses to start while any 'revision' is null, so an unpinned checkpoint can",
+    "never silently change extraction behaviour. Repository ids follow OpenMed's",
+    "naming; confirm the exact id against the OpenMed org on Hugging Face when you",
+    "download, since a repo-id correction is a config edit here, not a code change.",
+    "All OpenMed checkpoints and their base models are Apache-2.0 / MIT. The",
+    "weights and this filled-in file stay on the box and are NOT committed."
+  ],
+  "device": "cuda",
+  "models": [
+    {
+      "family": "DiseaseDetect",
+      "repo": "OpenMed/OpenMed-NER-DiseaseDetect-SuperClinical-184M",
+      "revision": null,
+      "label": "DISEASE"
+    },
+    {
+      "family": "PharmaDetect",
+      "repo": "OpenMed/OpenMed-NER-PharmaDetect-SuperClinical-434M",
+      "revision": null,
+      "label": "DRUG"
+    },
+    {
+      "family": "ChemicalDetect",
+      "repo": "OpenMed/OpenMed-NER-ChemicalDetect-SuperClinical-434M",
+      "revision": null,
+      "label": "CHEMICAL"
+    },
+    {
+      "family": "AnatomyDetect",
+      "repo": "OpenMed/OpenMed-NER-AnatomyDetect-SuperClinical-434M",
+      "revision": null,
+      "label": "ANATOMY"
+    },
+    {
+      "family": "OncologyDetect",
+      "repo": "OpenMed/OpenMed-NER-OncologyDetect-SuperClinical-434M",
+      "revision": null,
+      "label": "ONCOLOGY"
+    }
+  ]
+}
