@@ -131,7 +131,7 @@ Everything committed here is permissive:
   data*, not the released Apache-2.0 *weights* — recorded so the licence story is
   complete. The weights stay on the box regardless.
 
-No restrictively-licensed component is committed to this repository. On `main` a
+No restrictively-licensed component is committed to this repository. On `doctorBox` a
 site may reach for a restricted stack (e.g. John Snow Labs) on merit under the
 brief's relaxed rule, with that key and those weights held on the demo box; that
 is a deployment choice, kept out of this repo.

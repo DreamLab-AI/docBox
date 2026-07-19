@@ -1,6 +1,6 @@
 # PRD-010 — Clinical Grounding Pipeline
 
-Status: Draft · Owner: DreamLab · Created 2026-07-17 · Realises PRD-000 (`main` demonstrator pivot — ingestion) · Supersedes: none
+Status: Draft · Owner: DreamLab · Created 2026-07-17 · Realises PRD-000 (`doctorBox` demonstrator pivot — ingestion) · Supersedes: none
 
 ## Summary
 
@@ -48,7 +48,7 @@ evidence-linked assertions, and clinical text resists naive extraction at every 
 
 - Entity-linking mechanics and terminology residency.
   [ADR-013](../adr/ADR-013-fhir-record-and-terminology-mount.md) owns the FHIR record shape, the
-  dm+d floor with a user mount, and (on `main`) SNOMED/UMLS embedded on the box; this PRD consumes
+  dm+d floor with a user mount, and (on `doctorBox`) SNOMED/UMLS embedded on the box; this PRD consumes
   that decision.
 - Model choice rationale and serving layout.
   [ADR-012](../adr/ADR-012-clinical-grounding-stack.md) owns why OpenMed + medspaCy +

@@ -82,7 +82,7 @@ redistributes freely:
   corpus concern
   ([ADR-013](../../docs/reference/adr/ADR-013-fhir-record-and-terminology-mount.md)).
 
-`main` relaxes the permissive-only rule for the model stack that reads the corpus
+`doctorBox` relaxes the permissive-only rule for the model stack that reads the corpus
 (ADR-012 may add a restricted checkpoint on the box), but the corpus itself stays
 permissive and publishable. Its restricted-terminology handling stays a runtime
 mount, never embedded here.

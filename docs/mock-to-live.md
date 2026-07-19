@@ -25,7 +25,7 @@ The welcome dialog states the same ladder in one breath:
 
 | Rung | What you need | What becomes real | What's still seeded |
 |---|---|---|---|
-| **Demo** (default) | Nothing but the app: `pnpm dev:app` → `http://localhost:5173`. No server. | Nothing. The UI boots the deterministic mock world offline (ADR-001). | Everything — every owner, agent, action and document. |
+| **Demo** (default) | Nothing but the app: `pnpm dev:app` → `http://localhost:5173`. No server. | Nothing. The UI boots the deterministic mock world offline (ADR-001). | Everything — every owner, agent, action, document and the synthetic patient record. |
 | **Dev-live** | The control-plane server running: `pnpm dev:server` → `http://127.0.0.1:8787` (terminal 1), then `cd app && VITE_DATA_MODE=live pnpm dev` → `http://localhost:5173` (terminal 2). | The transport: a real HTTP fetch of `/api/world` and a live SSE subscription to `/api/events`. | The world itself. The server serves the app's mock module as its single source of truth, so `/api/world` reports `dataSource: "seeded"`. |
 | **Host** | The built container stack on a real host: `cd docker && docker compose up -d`. Reach Foreman on `https://127.0.0.1:8443` (oauth2-proxy → control-plane) or the control plane directly on `http://127.0.0.1:8788`. | The datastore, identity (Entra + oauth2-proxy), audit sidecar and vaults — the M3–M6 host-runtime wiring. | Nothing, once a real datastore answers: `/api/world` reports `dataSource: "real"` and the demo layer erases. |
 

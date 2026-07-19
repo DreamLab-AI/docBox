@@ -1,9 +1,9 @@
 # Demonstrator Brief — Clinician-Facing Corpus Intelligence
 
-Status: Pivot brief · Created 2026-07-17 · Applies to `main` only (`vanilla` remains the generic
+Status: Pivot brief · Created 2026-07-17 · Applies to `doctorBox` only (`main` remains the generic
 sandbox baseline at its own line)
 
-This brief fixes the shared ground truth for the pivot of docBox's `main` branch into a **showcase
+This brief fixes the shared ground truth for the pivot of docBox's `doctorBox` branch into a **showcase
 for NHS clinicians**. It sits above the pivot's PRD/ADR/DDD set the way the vision brief sat above
 the original product: it names the use case, the architecture, the vocabulary every document must
 share, and the honest framing for a synthetic-data demonstrator. The per-document specs consume
@@ -79,7 +79,7 @@ Four moving parts, each grounded in the research digests held in RuVector `proje
 
 ### Target platform: NVIDIA DGX Spark
 
-`main`'s demonstrator targets an **NVIDIA DGX Spark** — a single desktop appliance with a GB10 Grace
+`doctorBox`'s demonstrator targets an **NVIDIA DGX Spark** — a single desktop appliance with a GB10 Grace
 Blackwell superchip, 128 GB of unified CPU/GPU memory, and FP4 acceleration
 ([ADR-015](reference/adr/ADR-015-target-platform-dgx-spark.md)). Two things follow. The unified
 memory holds the whole local stack at once — gpt-oss for the agents, the OpenMed NER checkpoints, and
@@ -88,8 +88,8 @@ memory, and the local route can run a larger, more accurate OCR model than a mem
 allows. The appliance is ARM64, so the container images and the Python sidecar build for aarch64. A
 single self-contained box also matches the demonstrator's whole posture — loopback-only, zero
 inbound, everything the demo needs on one machine — which is the strongest backing for the "your data
-never leaves the box" message the NHS audience is there to test. `vanilla` stays platform-agnostic;
-this target is `main`'s.
+never leaves the box" message the NHS audience is there to test. `main` stays platform-agnostic;
+this target is `doctorBox`'s.
 
 ### Why no vector RAG
 
@@ -133,9 +133,9 @@ model; this table is the binding reference so the writers do not diverge.
 
 ## Licence posture
 
-**`main` relaxes the permissive-only rule; `vanilla` keeps it.** The demonstrator on `main` is a
+**`doctorBox` relaxes the permissive-only rule; `main` keeps it.** The demonstrator on `doctorBox` is a
 one-shot, non-commercial showcase, not a distributed product, so it is not bound by the "everything
-shipped is MIT/Apache-2.0/BSD" rule that defines `vanilla`. `main` may use whatever makes the best
+shipped is MIT/Apache-2.0/BSD" rule that defines `main`. `doctorBox` may use whatever makes the best
 demonstrator — including restrictively-licensed clinical terminology (SNOMED CT UK, UMLS, ICD-10)
 and commercial clinical NLP (John Snow Labs Healthcare) — each under its own free-to-use terms. Two
 engineering caveats survive the relaxation, as good practice rather than licence philosophy:
@@ -148,14 +148,14 @@ engineering caveats survive the relaxation, as good practice rather than licence
   for this use, but a step the build performs, not an assumption.
 
 The permissive stack below stays the **default and the zero-setup floor** — the demonstrator is
-fully working with nothing but it, and it is `vanilla`'s defining constraint. `main` reaches past it
+fully working with nothing but it, and it is `main`'s defining constraint. `doctorBox` reaches past it
 only where a richer component sharpens the demo.
 
 - **Grounding models** — the default is OpenMed (Apache-2.0), medspaCy (permissive), GLiNER-biomed
   (Apache-2.0). John Snow Labs Spark NLP for Healthcare, previously ruled out on licence, is
-  available to `main` on merit (needs a JSL key; its weights are CC-BY-NC-ND) —
+  available to `doctorBox` on merit (needs a JSL key; its weights are CC-BY-NC-ND) —
   [ADR-012](reference/adr/ADR-012-clinical-grounding-stack.md).
-- **OCR** — the default local route is Qwen-VL; on `main` a Pixtral-class Mistral vision model may
+- **OCR** — the default local route is Qwen-VL; on `doctorBox` a Pixtral-class Mistral vision model may
   serve as a larger, more accurate local OCR route, its weights held on the box under Mistral's
   terms. Cloud OCR routes are unchanged (PRD-007).
 - **FHIR** — specification is CC0; the Medplum TypeScript SDK is Apache-2.0.
@@ -165,7 +165,7 @@ only where a richer component sharpens the demo.
   IAM (non-commercial) are still excluded from it.
 - **Terminology.** OpenMed does NER only, so coding comes from this layer. The zero-setup floor is
   dm+d (OGL) plus code-free canonicalisation, with a **user-supplied mount** for a site's own
-  SNOMED/UMLS — that floor is `vanilla`'s only path and `main`'s default. Because `main` is not
+  SNOMED/UMLS — that floor is `main`'s only path and `doctorBox`'s default. Because `doctorBox` is not
   redistributed, it may also **embed SNOMED CT / UMLS / ICD-10 directly on the box** under the
   free-to-use terms above, coding the record fully. Either way the terminology is read through an
   anticorruption layer and the choice is an audited, operator-owned decision — the same shape as the
@@ -197,10 +197,10 @@ existing series without reuse.
 | **PRD-010** Clinical grounding pipeline | Ingestion: OCR → NER → schema-guided extraction → Claims → LongitudinalRecord; evidence spans; temporal validity; contradiction detection. |
 | **PRD-011** Clinician query & reading mesh | The bounded specialist mesh, the query surface/panel, the CitedAnswer contract, honest limits. |
 | **ADR-011** Context-native retrieval | Reject the vector-RAG/embedding backbone; adopt ingestion-time grounding + context-native mesh reading + deterministic tools. Honest trade-offs and the token-economics boundary. |
-| **ADR-012** Clinical grounding stack | OpenMed + medspaCy + GLiNER by default; John Snow Labs available to `main` on merit (needs a key); the Python NER sidecar behind the TypeScript control plane. |
-| **ADR-013** FHIR record + terminology | FHIR R4 internal representation; Medplum TS SDK; dm+d floor with a user mount, and (on `main`) SNOMED/UMLS embedded on the box; the evidence-plus-validity Claim model. |
+| **ADR-012** Clinical grounding stack | OpenMed + medspaCy + GLiNER by default; John Snow Labs available to `doctorBox` on merit (needs a key); the Python NER sidecar behind the TypeScript control plane. |
+| **ADR-013** FHIR record + terminology | FHIR R4 internal representation; Medplum TS SDK; dm+d floor with a user mount, and (on `doctorBox`) SNOMED/UMLS embedded on the box; the evidence-plus-validity Claim model. |
 | **ADR-014** Corpus store, lexical index & entity graph | SQLite FTS5 (BM25) as the deterministic lexical tool; the per-document tree and the typed, non-embedded entity graph as the mesh's shared workspace; where the store sits relative to the data plane. |
-| **ADR-015** Target platform: DGX Spark | The `main` demonstrator's hardware target — GB10 Grace Blackwell, 128 GB unified memory, ARM64, FP4 — and its serving, build, and local-first consequences. |
+| **ADR-015** Target platform: DGX Spark | The `doctorBox` demonstrator's hardware target — GB10 Grace Blackwell, 128 GB unified memory, ARM64, FP4 — and its serving, build, and local-first consequences. |
 | **DDD-004** Clinical corpus bounded context | The formal ubiquitous language and aggregates for the corpus domain; the context map to DDD-001 (control plane), DDD-002 (overhaul lifecycle), DDD-003 (interface). |
 
 ## Reuse of the existing spine

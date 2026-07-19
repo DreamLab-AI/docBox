@@ -16,7 +16,7 @@ machine-readable ground truth and the internal representation align without tran
 The terminology question turns on the licence split, and on which branch we build. The verified
 positions (RuVector digests `docbox-research-openmed` and `docbox-research-retrieval`):
 
-| Terminology | Licence | Redistribute in a permissive image (`vanilla`) | Embed on the `main` box |
+| Terminology | Licence | Redistribute in a permissive image (`main`) | Embed on the `doctorBox` box |
 |---|---|---|---|
 | SNOMED CT (UK edition) | TRUD / NHS England Affiliate — free at point of use, redistribution-restricted | **No** | **Yes**, with a TRUD account |
 | UMLS | NLM licence, restricted redistribution | **No** | **Yes**, with a UTS account |
@@ -26,8 +26,8 @@ positions (RuVector digests `docbox-research-openmed` and `docbox-research-retri
 
 OpenMed does NER only ([ADR-012](./ADR-012-clinical-grounding-stack.md)); nothing in the grounding
 stack links entities to codes, so whatever coding exists must come from this decision. The
-[demonstrator brief](../../demonstrator-brief.md) sets the branch rule: `vanilla` ships permissive
-only and can embed nothing past the permissive rows; `main` is a one-shot demo, not redistributed,
+[demonstrator brief](../../demonstrator-brief.md) sets the branch rule: `main` ships permissive
+only and can embed nothing past the permissive rows; `doctorBox` is a one-shot demo, not redistributed,
 so it may embed any of them on the box under their free-to-use terms, provided the restricted files
 never enter this public repo.
 
@@ -57,8 +57,8 @@ validity interval is what makes the record longitudinal rather than merely aggre
 The name is Claim, not Fact, because this mutability is the point: anything extracted from a
 document can later be contradicted or superseded by another document.
 
-**4. Terminology: a mount by default, an embed for `main`.** The permissive floor — what `vanilla`
-ships and what `main` runs with zero setup — is:
+**4. Terminology: a mount by default, an embed for `doctorBox`.** The permissive floor — what `main`
+ships and what `doctorBox` runs with zero setup — is:
 
 - the NER stack (ADR-012), which needs no licensed terminology to run;
 - **code-free canonicalisation** — lemmatisation and string clustering — so reconciliation and
@@ -67,10 +67,10 @@ ships and what `main` runs with zero setup — is:
 - a **user-supplied mount**: a declared volume where a site places its own SNOMED CT or UMLS release
   under its own licence, read but never redistributed.
 
-Because `main` is a one-shot demonstrator and not redistributed, it may go further and **embed
+Because `doctorBox` is a one-shot demonstrator and not redistributed, it may go further and **embed
 SNOMED CT / UMLS / ICD-10 directly on the demo box** under the free-to-use terms in the brief,
 coding the record fully instead of mounting. The restricted files are obtained at build time and
-stay on the box, never committed to this public repo. `vanilla` keeps the mount-only path as its
+stay on the box, never committed to this public repo. `main` keeps the mount-only path as its
 permissive guarantee.
 
 Either way, terminology is read through an anticorruption layer, and choosing or mounting one is a
@@ -82,7 +82,7 @@ switch ([ADR-002](./ADR-002-apply-class-model.md)).
 
 - **The demonstrator is complete without any mount.** dm+d codes the highest-value category
   (medications); canonicalisation reconciles everything else; full SNOMED/UMLS coding appears where
-  `main` embeds it on the box or a site mounts its own. The demo script (PRD-008) can show the mount
+  `doctorBox` embeds it on the box or a site mounts its own. The demo script (PRD-008) can show the mount
   as an affordance — "your terminology, your licence, your box" — which lands well with an NHS
   audience.
 - The FHIR-shaped record plus coded medications exhibit the interoperability domain a
@@ -99,12 +99,12 @@ switch ([ADR-002](./ADR-002-apply-class-model.md)).
   becomes ours to own. Kept as the named fallback behind Medplum, not the first choice.
 - **fhir-typescript** — Apache-2.0 generated resource classes; a smaller community and slower
   cadence than Medplum, with none of its production track record.
-- **Bundle SNOMED CT into a redistributed image** — rejected for `vanilla` and for anything pushed
+- **Bundle SNOMED CT into a redistributed image** — rejected for `main` and for anything pushed
   to this public repo: that is redistribution and breaches the TRUD Affiliate licence. It is *not*
-  rejected for `main`'s demo box, which may embed SNOMED under a TRUD account because the box is not
+  rejected for `doctorBox`'s demo box, which may embed SNOMED under a TRUD account because the box is not
   redistributed — the file stays on the box, out of the repo.
 - **UMLS-based linking as the shipped default** (e.g. scispaCy's EntityLinker) — not the permissive
-  default, since the NLM licence cannot travel in a redistributed image; available to `main` on the
+  default, since the NLM licence cannot travel in a redistributed image; available to `doctorBox` on the
   box, or to any site through the mount.
 - **No coding at all** — the simplest and licence-trivial option, and canonicalisation alone would
   carry reconciliation. Rejected because coded data is the interoperability affordance the clinical

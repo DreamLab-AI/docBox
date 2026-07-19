@@ -8,7 +8,7 @@ Five things that trip people up on the first run, most common first.
 Fischer, Sam Whitfield), the clock never moves off 16 July 2026, every panel
 heading carries a **DEMO DATA** chip, and a strip under the tab bar reads:
 
-> Demo world — every owner, agent, action and document below is fabricated (ADR-001). Nothing here is real until you go live.
+> Demo world — every owner, agent, action, document and patient record below is fabricated (ADR-001; the patient is wholly synthetic, PRD-009). Nothing here is real until you go live.
 
 **This is not a fault.** It is the point. Foreman boots a deterministic mock world
 by default (ADR-001) so the interface renders offline and the same on every load.

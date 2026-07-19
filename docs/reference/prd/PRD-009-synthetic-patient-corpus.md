@@ -1,6 +1,6 @@
 # PRD-009 — Synthetic Patient Corpus
 
-Status: Draft · Owner: DreamLab · Created 2026-07-17 · Realises PRD-000 (`main` demonstrator pivot — corpus) · Supersedes: none
+Status: Draft · Owner: DreamLab · Created 2026-07-17 · Realises PRD-000 (`doctorBox` demonstrator pivot — corpus) · Supersedes: none
 
 ## Summary
 

@@ -26,13 +26,23 @@ words for the product and its parts.
 
 | Term | Meaning |
 |---|---|
-| **Foreman** | The web control plane in this repo — the eight-tab admin interface (`app/` + `server/`). The person who owns the box provisions, watches, approves, rolls back, and reads the audit trail here. The primary user never sees it. |
+| **Foreman** | The web control plane in this repo — the nine-tab admin interface (`app/` + `server/`). The person who owns the box provisions, watches, approves, rolls back, and reads the audit trail here. The primary user never sees it. |
 | **Surface** | A way people and agents interact with the box (Foreman web, code-server, the companion extension, the chat bubble). A surface's state-changing actions route through the core contract, so the audit boundary sits at the core, not the surface (ADR-009). |
 | **Module** | An optional capability, and exactly three things: a compose service (profile-gated when optional), a config entry with an apply-class, and a reach to the core API. Adding a capability is adding a module, never changing the core. The **System** tab renders the module manifest live. |
 | **Overhaul** | A large, structural change to the sandbox itself — a rebuild-class change routed through a reviewed plan: snapshot → build → healthcheck → cut over, with auto-rollback on failure (DDD-002). The expensive, risky work the agent layer takes on. |
 | **Vault** | A gocryptfs-encrypted, per-project filesystem. Unlocked through Foreman or corporate login; the sidecar owns the live FUSE mount (PRD-006). |
 | **Apply-class: hot / live / session / rebuild** | The four ways a change lands — an instant interface edit (hot), applied now to the running box (live), applied to new sessions (session), or a full image rebuild (rebuild). Shown as a coloured badge at the point of change so you know before you commit. |
-| **Demo / mock world** | The deterministic, offline world the UI boots by default (ADR-001). Every owner, agent, action and document is seeded and fabricated; the clock is frozen so it renders the same on every load. See [mock-to-live.md](mock-to-live.md) for how it becomes real. |
+| **Demo / mock world** | The deterministic, offline world the UI boots by default (ADR-001). Every owner, agent, action, document and patient record is seeded and fabricated; the clock is frozen so it renders the same on every load. See [mock-to-live.md](mock-to-live.md) for how it becomes real. |
+
+## Clinical terms (doctorBox demonstrator, from DDD-004)
+
+| Term | Meaning |
+|---|---|
+| **Synthetic patient** | The one invented patient whose mixed documents (letters, labs, a discharge summary, scans) seed the **Clinician** tab (PRD-009). Wholly fabricated; the demonstrator is not for clinical use. |
+| **Claim** | A single typed, evidence-linked assertion derived from a source document (a medication, lab result, diagnosis…). Its standing — active, superseded, refuted — can change; its content cannot. |
+| **Evidence span** | The citation primitive: exact character offsets into a source document's frozen text, with the quoted passage. Every Claim carries one, so every answer can cite what it stands on. |
+| **Reading session** | The query-time unit of audit: one clinician question and its cited answer, both attributed to the asking owner (DDD-004). |
+| **Grounding** | The ingestion step that turns OCR'd documents into Claims via the clinical NER sidecar (ADR-012). Runs offline in deterministic rules mode by default; pinned OpenMed checkpoints on the demo box. |
 
 ## See also
 

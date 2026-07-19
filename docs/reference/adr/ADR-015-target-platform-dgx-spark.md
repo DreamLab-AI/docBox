@@ -1,10 +1,10 @@
 # ADR-015 — Target Platform: NVIDIA DGX Spark
 
-Status: Accepted · Date: 2026-07-17 · Deciders: DreamLab · Applies to: `main` (demonstrator)
+Status: Accepted · Date: 2026-07-17 · Deciders: DreamLab · Applies to: `doctorBox` (demonstrator)
 
 ## Context
 
-The `main` demonstrator runs a stack of local models at once: gpt-oss for the agent mesh, the
+The `doctorBox` demonstrator runs a stack of local models at once: gpt-oss for the agent mesh, the
 OpenMed NER checkpoints for grounding ([ADR-012](./ADR-012-clinical-grounding-stack.md)), a vision
 model for OCR (PRD-007), and the FHIR/SQLite corpus store
 ([ADR-014](./ADR-014-corpus-store-lexical-index-and-graph.md)). The demonstrator's central promise to
@@ -15,12 +15,12 @@ On a commodity host with a single discrete GPU — say 24 GB of VRAM — these m
 gpt-oss-20b alone takes 13–16 GB, which is why [ADR-012](./ADR-012-clinical-grounding-stack.md)
 carried a CPU-pinning trade-off (keep the NER models on CPU so gpt-oss keeps the GPU) and why the
 local OCR route defaulted to a small model. The [demonstrator brief](../../demonstrator-brief.md)
-also relaxes the permissive-only rule for `main` and scopes the work to a single patient, both of
+also relaxes the permissive-only rule for `doctorBox` and scopes the work to a single patient, both of
 which make a larger, more accurate local stack worth running — if the hardware has the memory for it.
 
 ## Decision
 
-**`main`'s demonstrator targets an NVIDIA DGX Spark.** The relevant properties:
+**`doctorBox`'s demonstrator targets an NVIDIA DGX Spark.** The relevant properties:
 
 - **GB10 Grace Blackwell superchip** with **128 GB of unified LPDDR5X memory** shared between CPU and
   GPU. The whole local stack co-resides — gpt-oss, the OpenMed checkpoints, a vision OCR model, and
@@ -37,8 +37,8 @@ it (its weights held on the box under Mistral's terms, per the brief). And the s
 [ADR-012](./ADR-012-clinical-grounding-stack.md) is simpler here: models co-reside without a
 memory-budget juggle.
 
-`vanilla` stays platform-agnostic — its assumption is a commodity x86 host with a discrete GPU — so
-this target is `main`'s alone.
+`main` stays platform-agnostic — its assumption is a commodity x86 host with a discrete GPU — so
+this target is `doctorBox`'s alone.
 
 ## Consequences
 
@@ -53,7 +53,7 @@ this target is `main`'s alone.
   the memory to run the models the demo needs, rather than being forced to a cloud route for
   capacity.
 - **Single-vendor dependency and cost.** A DGX Spark is a specific appliance. Mitigation: the stack
-  is not DGX-only — it degrades to the commodity-GPU path (`vanilla`'s assumption) with the
+  is not DGX-only — it degrades to the commodity-GPU path (`main`'s assumption) with the
   CPU-pinning trade-off and a smaller OCR model, so a demo can still run on other hardware at lower
   fidelity.
 - **ARM64 wheel gaps** are the main practical risk. Mitigation: pin known-good aarch64 wheels, or
@@ -61,7 +61,7 @@ this target is `main`'s alone.
 
 ## Alternatives considered
 
-- **Commodity x86 host with a discrete GPU (e.g. 24 GB)** — `vanilla`'s assumption and the portable
+- **Commodity x86 host with a discrete GPU (e.g. 24 GB)** — `main`'s assumption and the portable
   fallback. It works, but forces the CPU-pinning trade-off and a smaller local OCR model, and leaves
   less headroom for a larger agent model. Kept as the degraded path, not the target.
 - **Cloud GPU** — rejected for the demonstrator. Sending pages or record text to a cloud model

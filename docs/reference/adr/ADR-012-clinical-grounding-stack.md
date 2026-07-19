@@ -10,10 +10,10 @@ which named-entity recognition and assertion stack, under the permissive-licence
 ([PRD-000](../prd/PRD-000-product-shape.md): MIT/Apache-2.0/BSD plus explicitly open government
 licences, no new proprietary exception)?
 
-On `main` that rule is relaxed — the demonstrator is a one-shot, non-redistributed showcase, so a
+On `doctorBox` that rule is relaxed — the demonstrator is a one-shot, non-redistributed showcase, so a
 restrictively-licensed stack is allowed on merit ([demonstrator brief](../../demonstrator-brief.md),
-"Licence posture"). The default below is chosen to be permissive and light regardless, so `vanilla`
-runs it unchanged and `main` reaches past it only where accuracy warrants.
+"Licence posture"). The default below is chosen to be permissive and light regardless, so `main`
+runs it unchanged and `doctorBox` reaches past it only where accuracy warrants.
 
 The stack must: recognise diseases, drugs and chemicals, anatomy and oncology-specific entities in
 English clinical prose; determine assertion status, because "no chest pain" must not become a
@@ -84,8 +84,8 @@ the terminology-mount decision in [ADR-013](./ADR-013-fhir-record-and-terminolog
   lacks, but with lower NER accuracy. Not adopted as first-line NER; retained as the candidate
   *linker* for a site that mounts UMLS under its own licence (ADR-013).
 - **John Snow Labs Spark NLP for Healthcare** — the strongest commercial clinical NLP stack. Under
-  the permissive-only rule (`vanilla`) it is excluded: a commercial EULA with CC-BY-NC-ND weights.
-  Under `main`'s relaxed rule it is **available on merit** — it needs a John Snow Labs licence key
+  the permissive-only rule (`main`) it is excluded: a commercial EULA with CC-BY-NC-ND weights.
+  Under `doctorBox`'s relaxed rule it is **available on merit** — it needs a John Snow Labs licence key
   and its weights stay on the demo box, out of this public repo. It is not the default: OpenMed is
   lighter, fully open, and already covers the corpus's entity families, so JSL is a reach-for option
   when a demo needs an entity type or an accuracy the open stack misses, not a baseline dependency.
@@ -98,8 +98,8 @@ the terminology-mount decision in [ADR-013](./ADR-013-fhir-record-and-terminolog
 - A new module: the NER sidecar joins OCR and the browser sidecar as the third Python/native
   service behind the control plane, under ADR-009's unchanged module rules (compose profile, config
   gate, apply-class, manifest entry).
-- The default grounding stack is wholly Apache-2.0/MIT, so `vanilla` runs it unchanged and the
-  brief's permissive floor holds; `main` may add a restrictively-licensed component (John Snow Labs,
+- The default grounding stack is wholly Apache-2.0/MIT, so `main` runs it unchanged and the
+  brief's permissive floor holds; `doctorBox` may add a restrictively-licensed component (John Snow Labs,
   a larger model) on merit under its relaxed rule.
 - Assertion handling is deterministic rules layered over statistical NER, which keeps the
   audit-trail story concrete: every suppressed or negated entity is attributable to a named rule.

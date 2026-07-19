@@ -3,7 +3,7 @@
 You just opened Foreman for the first time. You are in **demo mode**: a fabricated
 world that boots offline and renders the same on every load. Nothing you see is
 real, and nothing you do here touches a real system. This page is the 60-second
-tour — read it, click through the eight tabs, then come back when you want the
+tour — read it, click through the nine tabs, then come back when you want the
 data to be real.
 
 ## What opens first
@@ -21,21 +21,23 @@ seen it, so it appears once.
 
 A full-width strip sits under the tab bar. In demo mode it reads:
 
-> Demo world — every owner, agent, action and document below is fabricated (ADR-001). Nothing here is real until you go live.
+> Demo world — every owner, agent, action, document and patient record below is fabricated (ADR-001; the patient is wholly synthetic, PRD-009). Nothing here is real until you go live.
 
 The four owners — **Dana Okoro**, **Ravi Menon**, **Lena Fischer** and
-**Sam Whitfield** — their agents, actions and documents are all invented, and the
-clock is frozen at **16 July 2026** so the world renders the same on every load.
+**Sam Whitfield** — their agents, actions and documents are all invented, as is
+the synthetic patient whose record the **Clinician** tab reads (a demonstrator,
+not for clinical use), and the clock is frozen at **16 July 2026** so the world
+renders the same on every load.
 Every panel heading carries a small **DEMO DATA** chip, and the header badge reads
 **mock** (a violet tint, not the amber of a fault) with the title *Deterministic
 mock world (offline)*. Between the strip, the chip and the badge, you can always
 tell at a glance that the data is seeded.
 
-## The loop across the eight tabs
+## The loop across the nine tabs
 
-Foreman is eight tabs. The demo is built as a loop: start on **Overview**, act in
-a named tab, undo what you did in **Operations**, then see the shape of it all in
-**System**.
+Foreman is nine tabs. The demo is built as a loop: start on **Overview**, ask the
+patient record in **Clinician**, act in a named tab, undo what you did in
+**Operations**, then see the shape of it all in **System**.
 
 | Tab | What it answers |
 |---|---|
@@ -44,6 +46,7 @@ a named tab, undo what you did in **Operations**, then see the shape of it all i
 | **Activity** | What is happening right now? |
 | **Work** | What is the agent doing over the long run? (act here) |
 | **Documents** | What has been uploaded, and did it stay private? (act here) |
+| **Clinician** | What does the record say, and on what evidence? (ask here — synthetic patient, citations behind every sentence) |
 | **Configuration** | What can I change, and how does it land? (act here) |
 | **Operations** | Can I undo this, and prove what changed? (undo here) |
 | **System** | What is the box made of, and what is on? (see the shape) |

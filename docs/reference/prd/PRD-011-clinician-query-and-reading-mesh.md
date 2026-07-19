@@ -1,6 +1,6 @@
 # PRD-011 — Clinician Query and Reading Mesh
 
-Status: Draft · Owner: DreamLab · Created 2026-07-17 · Realises PRD-000 (`main` demonstrator pivot — query) · Supersedes: none
+Status: Draft · Owner: DreamLab · Created 2026-07-17 · Realises PRD-000 (`doctorBox` demonstrator pivot — query) · Supersedes: none
 
 ## Summary
 

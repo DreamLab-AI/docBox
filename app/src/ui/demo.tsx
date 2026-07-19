@@ -22,7 +22,7 @@ export const SIMULATED_NOTE =
   'Simulated — this ran against the fabricated demo world. Nothing on a real system changed.';
 
 const MOCK_BANNER =
-  'Demo world — every owner, agent, action and document below is fabricated (ADR-001). Nothing here is real until you go live.';
+  'Demo world — every owner, agent, action, document and patient record below is fabricated (ADR-001; the patient is wholly synthetic, PRD-009). Nothing here is real until you go live.';
 const DEGRADED_BANNER =
   'Live requested but the control plane is unreachable — still showing demo data.';
 const SEEDED_BANNER =
@@ -271,13 +271,14 @@ export function WelcomeDialog({ open, onClose }: { open: boolean; onClose: () =>
           <p style={{ margin: 0 }}>
             Nothing here is real. The four owners — <strong>Dana Okoro</strong>, <strong>Ravi Menon</strong>,{' '}
             <strong>Lena Fischer</strong> and <strong>Sam Whitfield</strong> — their agents, actions and documents are
-            all invented, and the clock is frozen at <strong>16 July 2026</strong> so the world renders the same on
-            every load.
+            all invented, as is the synthetic patient whose record the <strong>Clinician</strong> tab reads (a
+            demonstrator, not for clinical use), and the clock is frozen at <strong>16 July 2026</strong> so the world
+            renders the same on every load.
           </p>
           <p style={{ margin: 0 }}>
-            The loop across the eight tabs: start on <strong>Overview</strong>, act in the named tab (Work, Documents,
-            Configuration), undo what you did in <strong>Operations</strong>, and see the shape of it all in{' '}
-            <strong>System</strong>.
+            The loop across the nine tabs: start on <strong>Overview</strong>, ask the patient record in{' '}
+            <strong>Clinician</strong>, act in the named tab (Work, Documents, Configuration), undo what you did in{' '}
+            <strong>Operations</strong>, and see the shape of it all in <strong>System</strong>.
           </p>
 
           <div style={{ display: 'grid', gap: 'var(--s-1)', padding: 'var(--s-3)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-2)', border: '1px solid var(--line)' }}>

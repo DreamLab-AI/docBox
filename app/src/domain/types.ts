@@ -218,11 +218,11 @@ export interface ModuleInfo {
   applyClass?: ApplyClass;    // how turning it on/off lands
 }
 
-// ── Clinical corpus domain (DDD-004, main demonstrator) ──────────────────────
+// ── Clinical corpus domain (DDD-004, doctorBox demonstrator) ─────────────────
 // The typed, evidence-linked record built from one synthetic patient's documents.
 // Ingestion writes Claims; query time reads them. Every Claim carries provenance
 // back to exact source characters, so an answer can cite what it stands on. This
-// is the main-branch demonstrator's contract; vanilla does not ship it.
+// is the doctorBox demonstrator's contract; the generic main branch does not ship it.
 
 /** The deliberately-seeded scenarios (PRD-009) the demo is built to surface. */
 export type SeedId = 'S1' | 'S2' | 'S3' | 'S4' | 'S5' | 'S6';

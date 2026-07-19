@@ -1,6 +1,6 @@
 # PRD-008 — Clinician Demonstrator
 
-Status: Draft · Owner: DreamLab · Created 2026-07-17 · Realises PRD-000 (`main` demonstrator pivot) · Supersedes: none
+Status: Draft · Owner: DreamLab · Created 2026-07-17 · Realises PRD-000 (`doctorBox` demonstrator pivot) · Supersedes: none
 
 ## Summary
 

@@ -37,7 +37,7 @@ describe('DemoBanner — three branches on the real data plane', () => {
     vi.mocked(live.liveStatus).mockReturnValue('mock');
     const onGo = vi.fn();
     render(<DemoBanner onHowToGoLive={onGo} />);
-    expect(screen.getByText(/every owner, agent, action and document below is fabricated/i)).toBeInTheDocument();
+    expect(screen.getByText(/every owner, agent, action, document and patient record below is fabricated/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'How to go live' }));
     expect(onGo).toHaveBeenCalledTimes(1);
   });
@@ -150,7 +150,7 @@ describe('WelcomeDialog', () => {
   it('reproduces the getting-started tour inline and carries no dead in-app doc link', () => {
     render(<Harness />);
     const dialog = screen.getByRole('dialog');
-    // The tour is inline: it names it as such and spells out the eight-tab loop,
+    // The tour is inline: it names it as such and spells out the nine-tab loop,
     // so first run needs nothing the running app cannot serve.
     expect(within(dialog).getByText(/getting-started tour/i)).toBeInTheDocument();
     expect(within(dialog).getByText('Overview')).toBeInTheDocument();

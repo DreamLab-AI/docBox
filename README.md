@@ -19,9 +19,9 @@ Two rules shape every decision, both from the client:
   bundles. The maximalist in-house machine (agentbox) stays in-house.
 - **Maintainability beats capability.** Fewest tools, one per job, narrow interfaces we own.
 
-## What `main` is aimed at: a clinician demonstrator
+## What `doctorBox` is aimed at: a clinician demonstrator
 
-`main` now has a defined use case: a showcase for NHS doctors of what an agent harness can do with a
+`doctorBox` now has a defined use case: a showcase for NHS doctors of what an agent harness can do with a
 patient's records. One synthetic patient's mixed documents — letters, lab reports, a discharge
 summary, an e-consult email, a few scanned handwritten pages — ingest through the box's OCR; an
 agent layer grounds them into a typed, evidence-linked record; and a bounded mesh of specialist
@@ -29,8 +29,8 @@ agents answers a clinician's questions with a citation behind every sentence. It
 vector-similarity retrieval in favour of reading the record in context — for one patient the whole
 record nearly fits. It is a demonstrator, not for clinical use, on wholly synthetic data.
 
-Because `main` is a one-shot demonstrator and not a distributed product, it is free of the
-permissive-only rule that defines `vanilla`: it may run restrictively-licensed clinical terminology
+Because `doctorBox` is a one-shot demonstrator and not a distributed product, it is free of the
+permissive-only rule that defines `main`: it may run restrictively-licensed clinical terminology
 (SNOMED CT, UMLS) and larger models directly on the box — held on the box, never committed to this
 public repo — and it targets an NVIDIA DGX Spark, whose 128 GB of unified memory runs the whole
 local stack at once.
@@ -41,7 +41,7 @@ injectable live paths), the **Clinician** tab below, and the NER sidecar (offlin
 working; OpenMed models mode configured for the target box). The [demonstrator
 brief](docs/demonstrator-brief.md) and its PRD/ADR/DDD set (start at
 [PRD-008](docs/reference/prd/PRD-008-clinician-demonstrator.md)) are the plan it realises; what
-remains is host-runtime wiring (image builds, model downloads, live `pi`). The `vanilla` branch
+remains is host-runtime wiring (image builds, model downloads, live `pi`). The `main` branch
 keeps the generic sandbox without this use case.
 
 The flagship scene — a cited answer that surfaces the seeded medication contradiction instead of
@@ -119,7 +119,7 @@ keeps it a tenth of agentbox's surface.
 
 | Layer | Status | Where |
 |---|---|---|
-| **Foreman UI** — eight-tab control plane | UI built (mock); host-runtime pending | `app/` |
+| **Foreman UI** — nine-tab control plane | UI built (mock); host-runtime pending | `app/` |
 | **Control-plane server** — Hono, serves the world + SSE, TOML config, documents | Built, verified | `server/` |
 | **Companion extension** — code-server sidebar (chat + documents) | Scaffolded, compile-checked | `extension/` |
 | **Container definitions** — control-plane / audit / vault / browser images, egress firewall, oauth2-proxy | Written, compose-validated (images build on a host; DinD) | `docker/`, `scripts/` |
@@ -228,7 +228,7 @@ bind-mount limitation). See [docker/README.md](docker/README.md) for the build a
 
 Operator guides — start here:
 
-- [Getting started](docs/getting-started.md) — a 60-second first-run tour of the demo world and the eight-tab loop.
+- [Getting started](docs/getting-started.md) — a 60-second first-run tour of the demo world and the nine-tab loop.
 - [Mock to live](docs/mock-to-live.md) — the three rungs from the offline demo to a real datastore, and why a `live` badge can sit over seeded data.
 - [Glossary](docs/glossary.md) — every term on one screen: owner, session, agent, action, apply-class, snapshot, bead, gate, audit record.
 - [Troubleshooting](docs/troubleshooting.md) — the five things most likely to snag a first run.

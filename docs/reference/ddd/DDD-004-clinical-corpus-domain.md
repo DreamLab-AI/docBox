@@ -183,7 +183,7 @@ flowchart LR
   user-supplied terminology mount (ADR-013) sit outside the boundary. The grounding pipeline
   translates both: extraction output becomes Extractions and Claims, and mounted SNOMED/UMLS
   releases are consulted through a translation layer, so the domain model depends on no external
-  terminology's shape. On the permissive floor dm+d is the only embedded vocabulary; on `main` a
+  terminology's shape. On the permissive floor dm+d is the only embedded vocabulary; on `doctorBox` a
   richer terminology (SNOMED/UMLS/ICD-10) may be embedded on the box or mounted (ADR-013). Either
   way it is an audited, operator-owned configuration event in the System-Definition context,
   mirroring the local/cloud switch.
