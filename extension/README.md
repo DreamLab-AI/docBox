@@ -25,7 +25,7 @@ one server we own.
 
 | View | Call | Server route |
 |---|---|---|
-| Chat | `POST /api/chat` with `{ prompt }` | Relayed to the pi engine in RPC mode; the reply streams back as SSE (`ADR-005`), or arrives as one JSON body until that route lands (`PRD-003`, M3). The Chat view handles both. |
+| Chat | `POST /api/chat` with `{ prompt }` | **Live**: the server relays to the engine seam (mock by default, `pi` behind `DOCBOX_ENGINE=live`), attributes the turn from the auth headers, audits it, and answers one JSON body `{ ok, reply }`. The streaming SSE upgrade (`ADR-005`, `PRD-003`) needs no client change — the Chat view handles both. |
 | Documents | `GET /api/documents` | Lists documents (`DocumentInfo`). |
 | Documents | `POST /api/documents` with `{ name, sizeKb, mime, pages }` | Registers an upload and queues OCR; the server picks the OCR route (local vs cloud) from config, so the privacy switch is honoured server-side. |
 

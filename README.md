@@ -119,14 +119,9 @@ keeps it a tenth of agentbox's surface.
 
 | Layer | Status | Where |
 |---|---|---|
-<<<<<<< HEAD
 | **Foreman UI** — nine-tab control plane | UI built (mock); host-runtime pending | `app/` |
-| **Control-plane server** — Hono, serves the world + SSE, TOML config, documents | Built, verified | `server/` |
-=======
-| **Foreman UI** — eight-tab control plane | UI built (mock); host-runtime pending | `app/` |
 | **Control-plane server** — Hono, serves the world + SSE, TOML config, documents; world store (seeded default, real JSON-file store behind `DOCBOX_DATA=real` with `/api/provision`) | Built, verified | `server/` |
->>>>>>> main
-| **Companion extension** — code-server sidebar (chat + documents) | Scaffolded, compile-checked | `extension/` |
+| **Companion extension** — code-server sidebar (chat + documents), the primary user's surface | Built; `/api/chat` live on the server, installed into code-server by the image build | `extension/` |
 | **Container definitions** — control-plane / audit / vault / browser images, egress firewall, oauth2-proxy | Written, compose-validated (images build on a host; DinD) | `docker/`, `scripts/` |
 | **Agent engine** — typed seam + deterministic mock; live `pi` over RPC (stdio) | Seam + mock built, tested | `server/src/engine/` |
 | **Audit trail** — control plane emits attributed events → write-only, hash-chained sidecar | Built, tested; actor from oauth2-proxy headers | `server/src/audit/` |
