@@ -26,8 +26,8 @@ The welcome dialog states the same ladder in one breath:
 | Rung | What you need | What becomes real | What's still seeded |
 |---|---|---|---|
 | **Demo** (default) | Nothing but the app: `pnpm dev:app` → `http://localhost:5173`. No server. | Nothing. The UI boots the deterministic mock world offline (ADR-001). | Everything — every owner, agent, action, document and the synthetic patient record. |
-| **Dev-live** | The control-plane server running: `pnpm dev:server` → `http://127.0.0.1:8787` (terminal 1), then `cd app && VITE_DATA_MODE=live pnpm dev` → `http://localhost:5173` (terminal 2). | The transport: a real HTTP fetch of `/api/world` and a live SSE subscription to `/api/events`. | The world itself. The server serves the app's mock module as its single source of truth, so `/api/world` reports `dataSource: "seeded"`. |
-| **Host** | The built container stack on a real host: `cd docker && docker compose up -d`. Reach Foreman on `https://127.0.0.1:8443` (oauth2-proxy → control-plane) or the control plane directly on `http://127.0.0.1:8788`. | The datastore, identity (Entra + oauth2-proxy), audit sidecar and vaults — the M3–M6 host-runtime wiring. | Nothing, once a real datastore answers: `/api/world` reports `dataSource: "real"` and the demo layer erases. |
+| **Dev-live** | The control-plane server running: `pnpm dev:server` → `http://127.0.0.1:8787` (terminal 1), then `cd app && VITE_DATA_MODE=live pnpm dev` → `http://localhost:5173` (terminal 2). | The transport: a real HTTP fetch of `/api/world` and a live SSE subscription to `/api/events`. | The world itself — by default. The server serves the app's mock module, so `/api/world` reports `dataSource: "seeded"`. To go real locally without containers, run `DOCBOX_DATA=real pnpm dev:server`: the server then serves the real (empty) JSON-file store, `/api/world` reports `dataSource: "real"`, and the app shows the first-project card. |
+| **Host** | The built container stack on a real host: `cd docker && docker compose up -d`. Reach Foreman on `https://127.0.0.1:8443` (oauth2-proxy → control-plane) or the control plane directly on `http://127.0.0.1:8788`. | The datastore (the real JSON-file world store — `DOCBOX_DATA=real` is the compose default, on the `docbox-world` volume), identity (Entra + oauth2-proxy), audit sidecar and vaults. | Nothing of the world data: `/api/world` reports `dataSource: "real"` from an empty store, the demo layer erases, and the first `/api/provision` starts the real record. Only the option **schema** and the module **manifest** are static — capability descriptions, not seeded owners or actions. |
 
 ## Why a green "live" badge can still be seeded
 
@@ -40,9 +40,13 @@ strip stays visible with:
 
 > Seeded: the dev server serves the mock world (server/src/index.ts:39-47) — live-transported, not yet a real datastore.
 
-That strip only disappears when the server swaps to a real datastore and flips the
-flag to `"real"`. A green badge over seeded data is therefore expected until the
-**host** rung lands a real store — it is not a bug.
+That strip only disappears when the server serves a real datastore and flips the
+flag to `"real"`. That store now exists (`server/src/world/store.ts`): the seeded
+store is the byte-identical default, and `DOCBOX_DATA=real` selects the real
+JSON-file store — empty until the first `/api/provision`. A green badge over
+seeded data is therefore expected only while the server runs seeded (the dev-live
+default and the demo); set `DOCBOX_DATA=real` (dev) or use the host stack (where
+it is the default) to reach real data. It is not a bug.
 
 ## The full host build
 

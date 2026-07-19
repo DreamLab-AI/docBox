@@ -151,7 +151,7 @@ function TopBar() {
         </span>
         <span title="Audit hash-chain last verified" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <StatusPip status="pass" />
-          <span className="muted">audit verified</span> {fmtAgo(sys.auditChainVerifiedAt, now)}
+          <span className="muted">audit verified</span> {sys.auditChainVerifiedAt > 0 ? fmtAgo(sys.auditChainVerifiedAt, now) : 'never'}
         </span>
         <span title="Embedded local model" className="muted">model <span className="mono" style={{ color: 'var(--fg-1)' }}>{sys.localModel}</span></span>
         <span title={badge.title} className="badge"

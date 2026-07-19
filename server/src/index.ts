@@ -1,8 +1,10 @@
 // docBox control-plane server.
 // Serves the domain world and a live event stream to the Foreman UI.
-// The world comes from ONE source of truth — the app's mock module — so the
-// server and the offline mock never drift. Swapping to a real datastore later
-// means replacing the imports below; the routes and the UI stay put.
+// The world comes through ONE seam — getWorldStore() — with two impls behind it,
+// chosen by DOCBOX_DATA: the seeded store (the app's mock module, the offline
+// default, byte-identical to before the store existed) and the real JSON-file
+// store (an initially empty datastore that a first provision brings to life).
+// The routes and the UI stay put across the swap; only the seam knows which.
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
@@ -13,18 +15,21 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { parse as parseToml, stringify as stringifyToml } from 'smol-toml';
 
-// Single source of truth: the app's deterministic mock world.
+// The seeded world's static pieces the routes still reference directly: the
+// config option schema (its values govern the OCR route and the derived TOML) and
+// the seeded entities + demo clock the synthetic SSE tick invents events from.
+// The world DATA now flows through the store seam below, not these imports.
 import {
-  owners, sessions, agents, elements, actions, configOptions,
-  snapshots, beads, audit, vaults, documents, modules, systemStatus, NOW,
+  agents, elements, actions, configOptions, NOW,
 } from '../../app/src/data/mock.ts';
-import type { ActionEvent, ActionKind } from '../../app/src/domain/types.ts';
+import type { ActionEvent, ActionKind, DocumentInfo } from '../../app/src/domain/types.ts';
 import { getEngine, type IdentityTuple } from './engine/client';
 import { getAuditEmitter, identityFromHeaders, tupleFor, auditEvent } from './audit/emit';
 import { CORPUS_DOCUMENTS } from '../../app/src/data/corpus.ts';
 import { getStore } from './corpus/store';
 import { getGrounding } from './corpus/grounding';
 import { getMesh } from './corpus/mesh';
+import { getWorldStore } from './world/store';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const TOML_PATH = process.env.DOCBOX_TOML ?? join(here, '../../docker/foreman.toml');
@@ -40,44 +45,39 @@ app.use('/api/*', cors({ origin: ALLOWED_ORIGIN }));
 
 // ── World snapshot ─────────────────────────────────────────────────────────
 // One call hydrates the whole UI. The adapter reads this at boot in live mode.
-app.get('/api/world', (c) =>
-  c.json({
-    now: NOW,
-    // The world is the app's mock module (see imports above), so the data is
-    // seeded, not a real datastore. Declared explicitly so the UI's live strip
-    // can stay honest — a green 'live' badge over seeded data reads as seeded.
-    // Swapping to a real store later flips this to 'real'.
-    dataSource: 'seeded',
-    owners, sessions, agents, elements, actions,
-    config: configOptions, snapshots, beads, audit, vaults, documents, modules,
-    system: systemStatus,
-    timeWindow: [Math.min(...actions.map((a) => a.ts)), Math.max(...actions.map((a) => a.ts), NOW)],
-  }),
-);
+// The store carries dataSource ('seeded' by default, 'real' behind DOCBOX_DATA)
+// so the UI's live strip stays honest — a green 'live' badge over seeded data
+// reads as seeded — and a fresh real world reports a finite [now, now] window
+// even with no actions yet.
+app.get('/api/world', (c) => c.json(getWorldStore().world()));
 
 // ── Documents ────────────────────────────────────────────────────────────────
 // List uploaded documents and accept new uploads. Upload records the document
 // and queues OCR; the route (local vs a cloud provider) comes from config, so
 // the per-feature privacy switch decides where the page image is processed.
-app.get('/api/documents', (c) => c.json(documents));
+app.get('/api/documents', (c) => c.json(getWorldStore().documents()));
 
 app.post('/api/documents', async (c) => {
+  const store = getWorldStore();
   const body = await c.req.json().catch(() => ({}));
   const name = typeof body.name === 'string' ? body.name : 'upload.bin';
   const route = (configOptions.find((o) => o.key === 'ocr.route')?.value as string) ?? 'local';
-  // In this milestone the store is in-memory; a real deployment writes to the
-  // project's user-data plane and the OCR service processes asynchronously.
-  const doc = {
-    id: `doc-${documents.length + 1}`, name,
-    ownerId: (body.ownerId as string) ?? owners[0].id,
+  // The default owner/id/clock come from the store, not the seeded arrays, so an
+  // upload to a real (empty) box attributes to the box's owner (or anonymous) and
+  // ids stay unique per store. A real deployment writes the page to the project's
+  // user-data plane and the OCR service processes it asynchronously.
+  const existing = store.documents();
+  const doc: DocumentInfo = {
+    id: `doc-${existing.length + 1}`, name,
+    ownerId: (body.ownerId as string) ?? store.world().owners[0]?.id ?? 'anonymous',
     project: (body.project as string) ?? 'project-aurora',
     sizeKb: Number(body.sizeKb) || 100, pages: Number(body.pages) || 1,
     mime: (body.mime as string) ?? 'application/pdf',
-    uploadedAt: NOW, ocr: 'pending' as const,
-    ocrRoute: route as 'local' | 'openai' | 'mistral' | 'gemini' | 'anthropic',
+    uploadedAt: store.world().now, ocr: 'pending' as const,
+    ocrRoute: route as DocumentInfo['ocrRoute'],
     handwriting: Boolean(body.handwriting),
   };
-  documents.unshift(doc);
+  store.addDocument(doc);
   const uploader = identityFromHeaders((n) => c.req.header(n));
   await getAuditEmitter().emit(auditEvent('document_upload',
     tupleFor(uploader, { sessionId: 'control-plane', agentId: 'foreman', actionId: doc.id }),
@@ -85,7 +85,36 @@ app.post('/api/documents', async (c) => {
   return c.json({ ok: true, document: doc });
 });
 
-app.get('/api/health', (c) => c.json({ status: 'ok', stack: systemStatus.activeStack, ts: NOW }));
+// ── Provision a first project ─────────────────────────────────────────────────
+// The "initialise a new live project" action, the moment a real box stops being
+// empty and the demo world is gone for good. Acting identity comes from the
+// oauth2-proxy forward-auth headers (never the body): if the box has no owner
+// with that id yet, the first provision creates the first owner. The store creates
+// a locked vault for the project, a session for the provisioning act and a
+// 'provision' action attributed to the acting owner, then returns a fresh world so
+// the UI hydrates without a second fetch. 400 on a missing/invalid name; 409 if
+// the project already exists.
+app.post('/api/provision', async (c) => {
+  const body = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const project = typeof body.project === 'string' ? body.project : '';
+  const vault = body.vault !== false; // default: create the project's vault
+  const identity = identityFromHeaders((n) => c.req.header(n));
+  const result = getWorldStore().provision({ project, vault, identity });
+  if (!result.ok) return c.json({ ok: false, error: result.error }, result.status);
+  // Attributed + audited: one 'provision' event, actor from the headers, session
+  // and action ids from the records the store just created.
+  await getAuditEmitter().emit(auditEvent('provision',
+    tupleFor(identity, { sessionId: result.sessionId, agentId: 'foreman', actionId: result.action.id }),
+    { project: result.action.label.replace(/^Provision /, ''), vault, ownerId: result.owner.id }));
+  return c.json({ ok: true, world: result.world });
+});
+
+app.get('/api/health', (c) => {
+  // Health reads the active store, not the mock module: in real mode the stack
+  // and clock are the live values, in seeded mode they are the demo ones.
+  const w = getWorldStore().world();
+  return c.json({ status: 'ok', stack: w.system.activeStack, ts: w.now });
+});
 
 // ── Agent engine (PRD-003) ────────────────────────────────────────────────────
 // The control plane drives the agent engine through one seam. By default a
@@ -224,13 +253,31 @@ function nextLiveEvent(atMs: number): ActionEvent {
 
 app.get('/api/events', (c) =>
   streamSSE(c, async (stream) => {
-    let tick = 0;
-    // Clock advances from NOW; the UI treats these as fresh arrivals.
-    while (!stream.closed && tick < 10_000) {
-      const at = NOW + tick * 4000;
-      await stream.writeSSE({ event: 'action', data: JSON.stringify(nextLiveEvent(at)) });
-      tick += 1;
-      await stream.sleep(4000);
+    const store = getWorldStore();
+    if (store.dataSource === 'seeded') {
+      // Seeded: the synthetic tick gives the demo UI live motion off the mock
+      // world, exactly as before the store existed.
+      let tick = 0;
+      // Clock advances from NOW; the UI treats these as fresh arrivals.
+      while (!stream.closed && tick < 10_000) {
+        const at = NOW + tick * 4000;
+        await stream.writeSSE({ event: 'action', data: JSON.stringify(nextLiveEvent(at)) });
+        tick += 1;
+        await stream.sleep(4000);
+      }
+      return;
+    }
+    // Real: NEVER fabricate. Stream only genuinely appended actions (a provision,
+    // an upload). Baseline is the action count at connect, so history is not
+    // replayed; new actions are polled by index and emitted as they land.
+    let sent = store.world().actions.length;
+    while (!stream.closed) {
+      const current = store.world().actions;
+      while (sent < current.length) {
+        await stream.writeSSE({ event: 'action', data: JSON.stringify(current[sent]) });
+        sent += 1;
+      }
+      await stream.sleep(1000);
     }
   }),
 );

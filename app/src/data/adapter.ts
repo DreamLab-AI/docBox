@@ -53,8 +53,12 @@ export function hydrate(next: World): void {
   world = next;
 }
 
-/** Append a live action (from the SSE stream). Keeps the array time-sorted. */
+/** Append a live action (from the SSE stream). Keeps the array time-sorted.
+ *  Idempotent by action id: a snapshot fetched after a mutation already contains
+ *  the action the stream is about to re-deliver (the hydrate/stream overlap), so
+ *  a duplicate delivery must not double-count. */
 export function pushAction(a: ActionEvent): void {
+  if (world.actions.some((x) => x.id === a.id)) return;
   world.actions = [...world.actions, a].sort((x, y) => x.ts - y.ts);
 }
 

@@ -1,5 +1,6 @@
 import { store } from '../../data/adapter';
 import { Panel, OwnerTag, StatusPip, WhenToUse, fmtAgo } from '../../ui/primitives';
+import { LiveStart } from '../../ui/liveStart';
 import type { ActionKind } from '../../domain/types';
 
 // Overview: the at-a-glance surface. Reads the same store as every other tab;
@@ -36,6 +37,7 @@ export default function OverviewTab() {
 
   return (
     <div style={{ display: 'grid', gap: 'var(--s-4)' }}>
+      <LiveStart />
       <WhenToUse>
         Start here to see whether the sandbox is healthy and busy. Use the stat row to spot trouble
         fast (blocked writes, a failed overhaul, an overhaul waiting on your sign-off), then open the
@@ -120,10 +122,10 @@ export default function OverviewTab() {
         <Panel title="System" hint="What is provisioned right now">
           <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 'var(--s-2) var(--s-4)', margin: 0, fontSize: 'var(--fs-sm)' }}>
             <dt className="muted">Active stack</dt><dd style={{ margin: 0 }} className="mono">{sys.activeStack} · {sys.imageTag}</dd>
-            <dt className="muted">Uptime</dt><dd style={{ margin: 0 }}>{sys.uptimeHours}h</dd>
+            <dt className="muted">Uptime</dt><dd style={{ margin: 0 }}>{sys.uptimeHours < 1 ? '<1' : Math.round(sys.uptimeHours)}h</dd>
             <dt className="muted">Local model</dt><dd style={{ margin: 0 }} className="mono">{sys.localModel}</dd>
             <dt className="muted">Providers online</dt><dd style={{ margin: 0 }}>{sys.providersOnline.join(', ')}</dd>
-            <dt className="muted">Audit verified</dt><dd style={{ margin: 0 }}>{fmtAgo(sys.auditChainVerifiedAt, now)}</dd>
+            <dt className="muted">Audit verified</dt><dd style={{ margin: 0 }}>{sys.auditChainVerifiedAt > 0 ? fmtAgo(sys.auditChainVerifiedAt, now) : 'never'}</dd>
             <dt className="muted">Pending rebuilds</dt><dd style={{ margin: 0 }}>{sys.pendingRebuildChanges}</dd>
           </dl>
         </Panel>

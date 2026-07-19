@@ -119,8 +119,13 @@ keeps it a tenth of agentbox's surface.
 
 | Layer | Status | Where |
 |---|---|---|
+<<<<<<< HEAD
 | **Foreman UI** — nine-tab control plane | UI built (mock); host-runtime pending | `app/` |
 | **Control-plane server** — Hono, serves the world + SSE, TOML config, documents | Built, verified | `server/` |
+=======
+| **Foreman UI** — eight-tab control plane | UI built (mock); host-runtime pending | `app/` |
+| **Control-plane server** — Hono, serves the world + SSE, TOML config, documents; world store (seeded default, real JSON-file store behind `DOCBOX_DATA=real` with `/api/provision`) | Built, verified | `server/` |
+>>>>>>> main
 | **Companion extension** — code-server sidebar (chat + documents) | Scaffolded, compile-checked | `extension/` |
 | **Container definitions** — control-plane / audit / vault / browser images, egress firewall, oauth2-proxy | Written, compose-validated (images build on a host; DinD) | `docker/`, `scripts/` |
 | **Agent engine** — typed seam + deterministic mock; live `pi` over RPC (stdio) | Seam + mock built, tested | `server/src/engine/` |
@@ -192,7 +197,7 @@ docBox/
 │       ├── data/mock.ts       ← deterministic seeded world
 │       ├── data/live.ts       ← hydrate from the server + SSE subscription
 │       └── features/          ← one directory per tab
-├── server/                   ← control-plane (Hono): /api/world·config·events·documents·engine; engine/ + audit/ seams
+├── server/                   ← control-plane (Hono): /api/world·config·events·documents·provision·engine; world/ (store seam) + engine/ + audit/ seams
 ├── extension/                ← code-server companion (VS Code sidebar): chat + documents dock (ADR-007)
 ├── docker/                   ← Dockerfiles (sandbox + control-plane/audit/vault/browser), compose, foreman.toml, README
 ├── scripts/                  ← rebuild.sh (blue/green), rollback.sh, init-firewall.sh (egress allowlist)
