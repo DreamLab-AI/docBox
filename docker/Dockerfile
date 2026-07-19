@@ -137,6 +137,25 @@ RUN --mount=type=cache,target=/root/.cache,uid=0,gid=0 \
     code-server --version
 
 # ---------------------------------------------------------------------------
+# Companion extension (ADR-007) — the primary user's Chat + Documents views,
+# built from source and installed UNPACKED into code-server's extensions dir so
+# the surface is docked on first launch. No marketplace and no vsce: code-server
+# scans well-formed extension folders (package.json + the esbuild bundle), which
+# keeps the toolchain at zero extra packaging dependencies.
+# ---------------------------------------------------------------------------
+COPY extension /tmp/companion-src
+RUN --mount=type=cache,target=/root/.cache,uid=0,gid=0 \
+    set -eux; \
+    cd /tmp/companion-src; \
+    npm install --no-audit --no-fund; \
+    npm run build; \
+    EXT_DIR=/home/dev/.local/share/code-server/extensions/docbox.docbox-companion-0.1.0; \
+    mkdir -p "${EXT_DIR}"; \
+    cp -r package.json out media "${EXT_DIR}/"; \
+    chown -R dev:dev /home/dev/.local; \
+    rm -rf /tmp/companion-src
+
+# ---------------------------------------------------------------------------
 # GATED BUNDLE 1 — TypeScript / dashboard build & test (foreman: toolchain.ts_dashboard)
 #   Biome (one binary = ESLint + Prettier), Vite, Vitest, Playwright, tsgo.
 #   Baked as global CLIs; chart/component libraries stay in project package.json.

@@ -151,6 +151,26 @@ app.post('/api/engine/prompt', async (c) => {
   return c.json(result);
 });
 
+// ── Companion chat (ADR-007) ─────────────────────────────────────────────────
+// The primary user's chat: a thin relay onto the same engine seam as
+// /api/engine/prompt, shaped for the Companion's Chat view — one JSON body
+// { ok, reply }. The view also accepts SSE, so when the pi streaming relay
+// lands (PRD-003) this route can upgrade without a client change. Attribution
+// comes from the auth headers (the primary user), never the body, and the turn
+// is audited like every other engine call.
+app.post('/api/chat', async (c) => {
+  const body = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : '';
+  if (!prompt) return c.json({ ok: false, error: 'prompt is required' }, 400);
+  const sessionId = typeof body.sessionId === 'string' ? body.sessionId : 'companion';
+  const owner = identityFromHeaders((n) => c.req.header(n));
+  const identity = tupleFor(owner, { sessionId, agentId: 'companion-chat', actionId: `chat-${sessionId}` });
+  const result = await getEngine().submitPrompt({ sessionId, prompt, identity });
+  await getAuditEmitter().emit(auditEvent('prompt', identity,
+    { sessionId, surface: 'companion', ok: result.ok, chars: result.text.length }));
+  return c.json({ ok: result.ok, reply: result.text });
+});
+
 // ── Configuration as TOML ────────────────────────────────────────────────────
 // The TOML file is the source of truth (ADR-004). If it is not on disk yet,
 // derive a starting document from the option defaults so the UI has something

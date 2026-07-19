@@ -364,6 +364,49 @@ describe('POST /api/engine/prompt', () => {
   });
 });
 
+describe('POST /api/chat (Companion)', () => {
+  it('relays to the engine seam and answers the Companion shape { ok, reply }', async () => {
+    const res = await app.request('/api/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-auth-request-user': 'user@client.co' },
+      body: JSON.stringify({ prompt: 'summarise the uploaded contract' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(typeof body.reply).toBe('string');
+    expect(body.reply.length).toBeGreaterThan(0);
+  });
+
+  it('is deterministic like the engine seam beneath it', async () => {
+    const post = () =>
+      app
+        .request('/api/chat', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ prompt: 'same input', sessionId: 'c1' }),
+        })
+        .then((r) => r.json());
+    const [a, b] = await Promise.all([post(), post()]);
+    expect(a.reply).toEqual(b.reply);
+  });
+
+  it('rejects an empty or missing prompt with 400', async () => {
+    const empty = await app.request('/api/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ prompt: '   ' }),
+    });
+    expect(empty.status).toBe(400);
+    const missing = await app.request('/api/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(missing.status).toBe(400);
+  });
+});
+
 describe('module entrypoint', () => {
   it('binds via serve() when not imported by a test (DOCBOX_NO_LISTEN unset)', async () => {
     vi.resetModules();

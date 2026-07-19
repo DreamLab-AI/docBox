@@ -53,14 +53,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     try {
       // ── Where pi connects ────────────────────────────────────────────────
-      // The control-plane server runs the pi engine in RPC mode
-      // (`pi --mode rpc`, corpus/12): it forwards this prompt and relays pi's
-      // streaming event model (message deltas, thinking, tool_execution_*) back
-      // as Server-Sent Events, matching the transport already chosen for the
-      // control plane (ADR-005). Until that route lands (PRD-003, milestone M3)
-      // the server may answer with a single JSON body; the reader below handles
-      // both a live SSE stream and a plain reply, so the view is correct now and
-      // needs no change when the stream is wired.
+      // The control-plane server relays this prompt to its engine seam (the
+      // deterministic mock by default; `pi --mode rpc` behind DOCBOX_ENGINE=live,
+      // corpus/12). The route is live and currently answers one JSON body
+      // { ok, reply }; the streaming relay of pi's event model (message deltas,
+      // thinking, tool_execution_*) as Server-Sent Events (ADR-005, PRD-003) is
+      // the planned upgrade. The reader below handles both a live SSE stream and
+      // a plain reply, so the view needs no change when the stream is wired.
       const response = await fetch(apiUrl('/api/chat'), {
         method: 'POST',
         headers: {
