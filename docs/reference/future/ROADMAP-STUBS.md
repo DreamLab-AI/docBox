@@ -23,4 +23,7 @@ moved, so those stale predictions have been removed rather than left to mislead.
   requirement that a desktop surface's consequential actions still route through the core audit
   contract (ADR-009). Write if the client brief wants native apps.
 - **PRD — chat surface.** The primary-user chat: the companion extension (ADR-007) is the
-  code-server path; a deep-chat bubble is the non-code-server path. Write when a host is chosen.
+  code-server path; a deep-chat bubble is the non-code-server path. Both now exist in-repo — the
+  Companion is installed into code-server by the image build, and the dependency-free bubble widget
+  is served by the control plane at `/bubble` (M7). The PRD remains to be written when a host is
+  chosen, to settle the client-dashboard embed and how the two surfaces share one identity.

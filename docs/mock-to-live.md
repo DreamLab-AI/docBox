@@ -29,6 +29,20 @@ The welcome dialog states the same ladder in one breath:
 | **Dev-live** | The control-plane server running: `pnpm dev:server` → `http://127.0.0.1:8787` (terminal 1), then `cd app && VITE_DATA_MODE=live pnpm dev` → `http://localhost:5173` (terminal 2). | The transport: a real HTTP fetch of `/api/world` and a live SSE subscription to `/api/events`. | The world itself — by default. The server serves the app's mock module, so `/api/world` reports `dataSource: "seeded"`. To go real locally without containers, run `DOCBOX_DATA=real pnpm dev:server`: the server then serves the real (empty) JSON-file store, `/api/world` reports `dataSource: "real"`, and the app shows the first-project card. |
 | **Host** | The built container stack on a real host: `cd docker && docker compose up -d`. Reach Foreman on `https://127.0.0.1:8443` (oauth2-proxy → control-plane) or the control plane directly on `http://127.0.0.1:8788`. | The datastore (the real JSON-file world store — `DOCBOX_DATA=real` is the compose default, on the `docbox-world` volume), identity (Entra + oauth2-proxy), audit sidecar and vaults. | Nothing of the world data: `/api/world` reports `dataSource: "real"` from an empty store, the demo layer erases, and the first `/api/provision` starts the real record. Only the option **schema** and the module **manifest** are static — capability descriptions, not seeded owners or actions. |
 
+The guided launcher wraps every rung so you need not remember the commands. Run `pnpm launch` for
+the interactive menu, or a rung directly (add `--print` to see the commands without running them):
+
+| Rung | Launcher |
+|---|---|
+| Demo | `pnpm launch demo` |
+| Dev-live (seeded) | `pnpm launch dev` |
+| Dev-live (real store) | `pnpm launch real` |
+| One-port built (compiled UI + real store on 8787, with the `/bubble` widget) | `pnpm launch up` |
+| Host | `pnpm launch host` — prints the docker compose sequence; it never runs docker here |
+
+`pnpm launch doctor` checks Node, pnpm, ports and `app/dist` before you start, and `pnpm launch
+configure` writes a git-ignored `.env.docbox` of dev defaults the launcher then sources.
+
 ## Why a green "live" badge can still be seeded
 
 At the **dev-live** rung the header badge reads **live** — the UI really did

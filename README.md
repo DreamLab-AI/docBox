@@ -88,9 +88,10 @@ keeps it a tenth of agentbox's surface.
 | **Control-plane server** — Hono, serves the world + SSE, TOML config, documents; world store (seeded default, real JSON-file store behind `DOCBOX_DATA=real` with `/api/provision`) | Built, verified | `server/` |
 | **Companion extension** — code-server sidebar (chat + documents), the primary user's surface | Built; `/api/chat` live on the server, installed into code-server by the image build | `extension/` |
 | **Container definitions** — control-plane / audit / vault / browser images, egress firewall, oauth2-proxy | Written, compose-validated (images build on a host; DinD) | `docker/`, `scripts/` |
-| **Agent engine** — typed seam + deterministic mock; live `pi` over RPC (stdio) | Seam + mock built, tested | `server/src/engine/` |
+| **Agent engine** — typed seam + deterministic mock; live `pi` over RPC (stdio) | Seam + mock built, tested; real-mode engine turns recorded to the world store; `/api/chat` streams over SSE. Live `pi` is host-runtime | `server/src/engine/` |
 | **Audit trail** — control plane emits attributed events → write-only, hash-chained sidecar | Built, tested; actor from oauth2-proxy headers | `server/src/audit/` |
-| Identity (Entra + oauth2-proxy), tunnels, vaults, chat bubble | Specified; config written, host-runtime | `docs/`, `docker/` |
+| **Chat bubble** — embeddable, dependency-free widget served at `/bubble` (M7) | Widget built and served; client-dashboard embed pending a chosen host | `server/public/` |
+| Identity (Entra + oauth2-proxy), tunnels, vaults | Specified; config written, host-runtime | `docs/`, `docker/` |
 
 Foreman runs against a mock world by default (offline, deterministic) and, with
 `VITE_DATA_MODE=live`, hydrates from the control-plane server instead — which, in dev, re-serves the
@@ -171,9 +172,28 @@ docBox/
 > [getting-started tour](docs/getting-started.md); [mock-to-live](docs/mock-to-live.md) explains the
 > three rungs; [troubleshooting](docs/troubleshooting.md) covers the first-run snags.
 
+The guided way — `pnpm launch` walks the three rungs (demo → dev-live → one-port built),
+prints what will run, the URLs and how to stop, then starts nothing you did not pick:
+
 ```bash
 pnpm install
+pnpm launch                         # guided menu: demo · dev · real · up · companion · host
+pnpm launch doctor                  # environment check (Node, pnpm, ports, app/dist)
+pnpm launch configure               # write a git-ignored .env.docbox of dev defaults
+```
 
+Each rung also has a direct subcommand (add `--print` to see the commands without running them):
+
+```bash
+pnpm launch demo                    # offline mock world (pnpm dev:app)     -> http://localhost:5173
+pnpm launch dev                     # dev-live, seeded: server + live UI
+pnpm launch real                    # dev-live, REAL store: DOCBOX_DATA=real server + live UI
+pnpm launch up                      # one-port built: pnpm build then real server on 8787 + /bubble
+```
+
+The manual commands the launcher wraps, for reference:
+
+```bash
 # offline: the deterministic mock world, no server needed
 pnpm dev:app                        # http://localhost:5173
 
@@ -182,8 +202,10 @@ pnpm dev:server                     # http://127.0.0.1:8787  (terminal 1)
 cd app && VITE_DATA_MODE=live pnpm dev   # http://localhost:5173  (terminal 2)
 ```
 
-The container image builds on a real host with Docker, not in this dev environment (a
-bind-mount limitation). See [docker/README.md](docker/README.md) for the build and run sequence.
+The one-port rung (`pnpm launch up`) builds the UI and serves it plus the API on a single port; the
+embeddable chat bubble (M7) then lives at `http://127.0.0.1:8787/bubble`. The container image builds
+on a real host with Docker, not in this dev environment (a bind-mount limitation). See
+[docker/README.md](docker/README.md) for the build and run sequence.
 
 ## Documents
 
@@ -192,7 +214,7 @@ Operator guides — start here:
 - [Getting started](docs/getting-started.md) — a 60-second first-run tour of the demo world and the eight-tab loop.
 - [Mock to live](docs/mock-to-live.md) — the three rungs from the offline demo to a real datastore, and why a `live` badge can sit over seeded data.
 - [Glossary](docs/glossary.md) — every term on one screen: owner, session, agent, action, apply-class, snapshot, bead, gate, audit record.
-- [Troubleshooting](docs/troubleshooting.md) — the five things most likely to snag a first run.
+- [Troubleshooting](docs/troubleshooting.md) — the six things most likely to snag a first run.
 
 Reference record:
 
@@ -234,16 +256,20 @@ flowchart LR
   style M4 fill:#2b2410,stroke:#f0a53a
   style M5 fill:#2b2410,stroke:#f0a53a
   style M6 fill:#2b2410,stroke:#f0a53a
+  style M7 fill:#2b2410,stroke:#f0a53a
 ```
 
-Green is shipped and judged, amber is in progress (M3–M6: seams built, host-runtime wiring remains),
-unstyled M7 is not started.
+Green is shipped and judged; amber is in progress. M3's repo side is done — real-mode engine turns
+are recorded to the world store and `/api/chat` streams over SSE — with only the live `pi` process
+host-runtime; M4–M6 have their seams and definitions built with host-runtime wiring remaining; M7's
+bubble widget is built and served at `/bubble`, its client-dashboard embed pending a chosen host.
 
 M3's engine seam and M6's audit service are built and tested behind the adapter pattern
 (`server/src/engine/`, `server/src/audit/`); M4's container definitions and the default-deny egress
 boundary are written and compose-validated. What remains is host-runtime wiring — a live `pi`
 process, the running audit sidecar, real Entra/OIDC and tunnel secrets — which turns on when the
-images are built on a real host.
+images are built on a real host. The M7 chat bubble ships as a dependency-free widget the control
+plane serves at `/bubble`; only its client-dashboard embed waits on that host.
 
 ## Research corpus
 

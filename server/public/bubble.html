@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>docBox chat bubble — embed demo</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.55;
+      color: #1a1f2b;
+      background: #f4f6fb;
+    }
+    main { max-width: 720px; margin: 0 auto; padding: 48px 24px 120px; }
+    h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
+    .lede { color: #5b6472; margin: 0 0 1.75rem; }
+    p { margin: 0 0 1rem; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
+    pre {
+      background: #121620;
+      color: #eef2f8;
+      padding: 16px 18px;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    .note { font-size: 0.9rem; color: #5b6472; }
+    a { color: #3a5fb0; }
+    @media (prefers-color-scheme: dark) {
+      body { color: #eef2f8; background: #0b0d12; }
+      .lede, .note { color: #868f9f; }
+      a { color: #5b8cff; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>docBox chat bubble</h1>
+    <p class="lede">An embeddable, dependency-free chat widget for the docBox control plane (milestone&nbsp;M7).</p>
+
+    <p>
+      M7 puts the primary user's chat surface anywhere a single script tag can go. The widget below
+      is the same asset the control plane serves at <code>/bubble.js</code>; it opens a small panel
+      and relays each message to the box's <code>/api/chat</code> endpoint, rendering the reply
+      inline. There is no framework, no build step, and nothing to install — it is one file.
+    </p>
+
+    <p>To embed it on another page, drop this one line where you want the bubble to appear:</p>
+
+    <pre>&lt;script src="http://YOUR-BOX/bubble.js" data-docbox-url="http://YOUR-BOX"&gt;&lt;/script&gt;</pre>
+
+    <p class="note">
+      The <code>data-docbox-url</code> attribute points the widget at your control plane. Omit it
+      and the widget calls the same origin that served the script. Replies come from the box's
+      engine — the deterministic mock by default, or the live engine when the box runs with
+      <code>DOCBOX_ENGINE=live</code>. An external dashboard embed (a different origin) needs the
+      box started with <code>DOCBOX_ALLOWED_ORIGIN</code> set so the browser permits the request.
+    </p>
+
+    <p class="note">
+      The live bubble is in the bottom-right corner of this page. It is loaded exactly as an embed
+      would be — <code>&lt;script src="bubble.js"&gt;&lt;/script&gt;</code>, resolved same-origin.
+    </p>
+  </main>
+
+  <!-- Load the widget itself so the bubble is live on this page (same-origin). -->
+  <script src="bubble.js"></script>
+</body>
+</html>
