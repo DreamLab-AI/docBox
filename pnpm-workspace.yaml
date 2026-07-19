@@ -1,5 +1,7 @@
 packages:
   - app
   - server
+allowBuilds:
+  esbuild: true
 onlyBuiltDependencies:
   - esbuild
