@@ -20,11 +20,12 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import type {
-  Owner, SessionInfo, AgentInfo, ElementInfo, ActionEvent, ConfigOption,
-  SnapshotInfo, BeadInfo, AuditRecord, VaultInfo, SystemStatus, DocumentInfo,
-  ModuleInfo,
+  Owner, SessionInfo, AgentInfo, ElementInfo, ActionEvent, ActionKind, ActionStatus,
+  ConfigOption, SnapshotInfo, BeadInfo, AuditRecord, VaultInfo, SystemStatus,
+  DocumentInfo, ModuleInfo,
 } from '../../../app/src/domain/types.ts';
 import type { RequestIdentity } from '../audit/emit';
+import type { IdentityTuple, EngineEvent } from '../engine/client';
 
 // The static box MANIFEST — a description of what the box can run and be
 // configured with, not world data. modules is the ADR-009 inventory; configOptions
@@ -95,6 +96,18 @@ export type ProvisionResult =
     }
   | { ok: false; status: 400 | 409; error: string };
 
+/** Input to recordEngineTurn: one completed engine trajectory to fold into the
+ *  world. sessionId + identity are the orchestrator's attribution tuple (never
+ *  from prompt text); prompt is the user text (its first ~60 chars title a new
+ *  session); events is the ordered trajectory whose consequential steps become
+ *  attributed ActionEvents. */
+export interface EngineTurnInput {
+  sessionId: string;
+  identity: IdentityTuple;
+  prompt: string;
+  events: EngineEvent[];
+}
+
 /** The narrow surface the routes need — nothing more. */
 export interface WorldStore {
   readonly dataSource: DataSource;
@@ -103,6 +116,7 @@ export interface WorldStore {
   addDocument(doc: DocumentInfo): void;
   appendAction(action: ActionEvent): void;
   provision(input: ProvisionInput): ProvisionResult;
+  recordEngineTurn(turn: EngineTurnInput): ActionEvent[];
 }
 
 // ── Mutable world data ───────────────────────────────────────────────────────
@@ -131,11 +145,49 @@ const OWNER_HUES = ['var(--owner-a)', 'var(--owner-b)', 'var(--owner-c)', 'var(-
 // a plane path segment, so it must be safe to use as one.
 const SLUG = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 
+/** Seed the monotonic id counter from the world already on disk so a restart
+ *  never re-mints an id that persisted before it. recordEngineTurn mints
+ *  `act-turn-${seq}`, provision mints `act-provision-${seq}` and
+ *  `sess-provision-${seq}`; all three draw from the SAME counter, so the seed is
+ *  the max numeric suffix seen across those persisted ids. A fresh (empty) world
+ *  yields 0, unchanged from the old in-memory default. */
+function maxRecordedSeq(data: WorldData): number {
+  let max = 0;
+  const scan = (id: string, re: RegExp): void => {
+    const m = re.exec(id);
+    if (m) {
+      const n = Number(m[1]);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+  };
+  for (const a of data.actions) scan(a.id, /^act-(?:turn|provision)-(\d+)$/);
+  for (const s of data.sessions) scan(s.id, /^sess-provision-(\d+)$/);
+  return max;
+}
+
 /** Derive a human name from an identity: the local part of a UPN, else the id. */
 function nameFor(identity: RequestIdentity | undefined): string {
   const upn = identity?.upn;
   if (upn && upn.includes('@')) return upn.slice(0, upn.indexOf('@'));
   return identity?.ownerId ?? 'anonymous';
+}
+
+/** Map one engine trajectory event to an ActionEvent kind+label, or undefined
+ *  when it is not a consequential world mutation. Only tool executions are
+ *  recorded: a write/edit tool is a 'file_change', any other tool is a
+ *  'tool_call'. session_start/session_end, agent_message deltas, tool_result
+ *  completions and errors are trajectory noise, not world actions, so they are
+ *  skipped — one action per initiating tool_call, never double-counted. */
+function mapEngineEvent(e: EngineEvent): { kind: ActionKind; label: string; status: ActionStatus } | undefined {
+  if (e.kind !== 'tool_call') return undefined;
+  const status: ActionStatus = e.status === 'blocked' ? 'blocked' : e.status === 'failed' ? 'failed' : 'ok';
+  const tool = e.tool ?? 'tool';
+  const isWrite = /write|edit/i.test(tool);
+  return {
+    kind: isWrite ? 'file_change' : 'tool_call',
+    label: `${isWrite ? 'Write' : 'Call'} ${tool}`,
+    status,
+  };
 }
 
 /** The base store both impls share. It differs only in its clock, its system
@@ -148,7 +200,9 @@ class BaseStore implements WorldStore {
   private clock: () => number;
   private systemOf: () => SystemStatus;
   private persist: () => void;
-  private seq = 0;
+  // Minted-id counter, SEEDED from the world already on disk (not 0) so a restart
+  // that reloaded persisted actions/sessions cannot re-mint a colliding id.
+  private seq: number;
 
   constructor(opts: {
     dataSource: DataSource;
@@ -159,6 +213,7 @@ class BaseStore implements WorldStore {
   }) {
     this.dataSource = opts.dataSource;
     this.data = opts.data;
+    this.seq = maxRecordedSeq(opts.data);
     this.clock = opts.clock;
     this.systemOf = opts.system;
     this.persist = opts.persist ?? (() => {});
@@ -206,6 +261,86 @@ class BaseStore implements WorldStore {
     this.persist();
   }
 
+  /** Find or create an owner by id. The first owner on an empty box is the admin,
+   *  every later one a user; each gets a stable deterministic hue. Shared by
+   *  provision and recordEngineTurn so the two paths can never drift. */
+  private ensureOwner(ownerId: string, name: string, upn: string): Owner {
+    let owner = this.data.owners.find((o) => o.id === ownerId);
+    if (!owner) {
+      owner = {
+        id: ownerId,
+        name,
+        upn,
+        role: this.data.owners.length === 0 ? 'admin' : 'user',
+        colour: OWNER_HUES[this.data.owners.length % OWNER_HUES.length],
+      };
+      this.data.owners.push(owner);
+    }
+    return owner;
+  }
+
+  /** Fold a completed engine trajectory into the world (M3, ADR-005). The seeded
+   *  store is a no-op returning [] so the mock world stays byte-identical; only the
+   *  real store records. It ensures the acting owner, the session (titled from the
+   *  prompt) and the agent exist, then appends one attributed ActionEvent per
+   *  consequential tool step — timestamped from the store clock, persisted once —
+   *  and returns exactly the actions it appended so the caller (and the live
+   *  /api/events stream) sees them arrive. */
+  recordEngineTurn(turn: EngineTurnInput): ActionEvent[] {
+    if (this.dataSource === 'seeded') return [];
+    const { sessionId, identity, prompt } = turn;
+    const now = this.clock();
+    const ownerId = identity.ownerId;
+    this.ensureOwner(ownerId, ownerId, ownerId);
+
+    // Ensure the session exists; a new one is titled from the first ~60 chars of
+    // the prompt so Foreman's timeline reads the intent, not an id.
+    if (!this.data.sessions.some((s) => s.id === sessionId)) {
+      this.data.sessions.push({
+        id: sessionId,
+        ownerId,
+        title: prompt.slice(0, 60) || 'Engine turn',
+        startedAt: now,
+      });
+    }
+
+    // Ensure the agent exists under this session (attributed to the same owner).
+    if (!this.data.agents.some((a) => a.id === identity.agentId && a.sessionId === sessionId)) {
+      this.data.agents.push({
+        id: identity.agentId,
+        name: identity.agentId,
+        kind: 'orchestrator',
+        ownerId,
+        sessionId,
+        parentAgentId: null,
+        spawnedAt: now,
+        status: 'running',
+      });
+    }
+
+    const appended: ActionEvent[] = [];
+    for (const e of turn.events) {
+      const mapped = mapEngineEvent(e);
+      if (!mapped) continue;
+      this.seq += 1;
+      const action: ActionEvent = {
+        id: `act-turn-${this.seq}`,
+        ts: now,
+        kind: mapped.kind,
+        ownerId,
+        agentId: identity.agentId,
+        sessionId,
+        label: mapped.label,
+        status: mapped.status,
+      };
+      this.data.actions.push(action);
+      appended.push(action);
+    }
+
+    this.persist();
+    return appended;
+  }
+
   provision(input: ProvisionInput): ProvisionResult {
     const project = typeof input.project === 'string' ? input.project.trim() : '';
     if (!project || !SLUG.test(project)) {
@@ -222,17 +357,7 @@ class BaseStore implements WorldStore {
 
     // First provision creates the first owner. An owner already present is reused;
     // the first owner on an empty box is the admin, the rest are users.
-    let owner = this.data.owners.find((o) => o.id === ownerId);
-    if (!owner) {
-      owner = {
-        id: ownerId,
-        name: nameFor(input.identity),
-        upn: input.identity?.upn ?? ownerId,
-        role: this.data.owners.length === 0 ? 'admin' : 'user',
-        colour: OWNER_HUES[this.data.owners.length % OWNER_HUES.length],
-      };
-      this.data.owners.push(owner);
-    }
+    const owner = this.ensureOwner(ownerId, nameFor(input.identity), input.identity?.upn ?? ownerId);
 
     // A session records the provisioning act (DDD-001): every action belongs to a
     // session, and provision is the box's first action. It is an instant act, so

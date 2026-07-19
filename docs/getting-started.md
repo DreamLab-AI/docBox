@@ -80,11 +80,16 @@ seeded world but transports it over the real server; only the host rung makes th
 data real. The full ladder, with the exact commands and addresses per rung, is in
 [mock-to-live.md](mock-to-live.md).
 
-To meet real data locally without containers, run `DOCBOX_DATA=real pnpm dev:server`.
-The server then serves the real (empty) JSON-file store instead of the seeded mock,
-`/api/world` reports `dataSource: "real"`, and the Overview tab greets you with the
-first-project card: name a project, provision it, and the demo world is gone for
-good as the real record begins.
+The guided path is `pnpm launch`: it names each rung, prints what will run and how
+to stop, then starts only the one you pick (`pnpm launch demo`, `dev`, `real` or
+`up`). `pnpm launch doctor` checks your environment first, and `pnpm launch
+configure` writes a git-ignored `.env.docbox` of dev defaults.
+
+To meet real data locally without containers, run `DOCBOX_DATA=real pnpm dev:server`
+(or `pnpm launch real`). The server then serves the real (empty) JSON-file store
+instead of the seeded mock, `/api/world` reports `dataSource: "real"`, and the
+Overview tab greets you with the first-project card: name a project, provision it,
+and the demo world is gone for good as the real record begins.
 
 ## See also
 

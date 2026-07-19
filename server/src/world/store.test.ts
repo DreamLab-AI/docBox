@@ -8,6 +8,28 @@ import { mkdtempSync, existsSync, rmSync, readFileSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { getWorldStore, resetWorldStore } from './store';
+import type { IdentityTuple, EngineEvent } from '../engine/client';
+
+// A minimal but realistic trajectory: session_start, a read tool, a write tool,
+// an assistant message and session_end. Only the two tool_calls are consequential
+// (the write maps to file_change, the read to tool_call); everything else is noise.
+function trajectory(sessionId: string): EngineEvent[] {
+  const at = 1_700_000_000_000;
+  return [
+    { kind: 'session_start', sessionId, seq: 0, ts: at, status: 'ok', text: 'run' },
+    { kind: 'agent_message', sessionId, seq: 1, ts: at + 1, text: 'looking' },
+    { kind: 'tool_call', sessionId, seq: 2, ts: at + 2, tool: 'read_file', status: 'ok' },
+    { kind: 'tool_result', sessionId, seq: 3, ts: at + 3, tool: 'read_file', status: 'ok' },
+    { kind: 'tool_call', sessionId, seq: 4, ts: at + 4, tool: 'write_file', status: 'ok' },
+    { kind: 'tool_result', sessionId, seq: 5, ts: at + 5, tool: 'write_file', status: 'ok' },
+    { kind: 'agent_message', sessionId, seq: 6, ts: at + 6, text: 'done' },
+    { kind: 'session_end', sessionId, seq: 7, ts: at + 7, status: 'ok' },
+  ];
+}
+
+const TUPLE: IdentityTuple = {
+  ownerId: 'entra:9f2a:6b1c', sessionId: 'sess-chat-1', agentId: 'companion-chat', actionId: 'chat-1',
+};
 
 function realEnv(dir: string): NodeJS.ProcessEnv {
   return { DOCBOX_DATA: 'real', DOCBOX_DATA_DIR: dir } as NodeJS.ProcessEnv;
@@ -175,8 +197,106 @@ describe('RealStore — an initially empty datastore', () => {
   });
 });
 
+describe('RealStore — recordEngineTurn folds a trajectory into the world', () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'docbox-turn-'));
+    resetWorldStore();
+  });
+  afterEach(() => {
+    resetWorldStore();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('creates a session (titled from the prompt), an agent and one action per tool step, attributed to the tuple', () => {
+    const store = getWorldStore(realEnv(dir));
+    const appended = store.recordEngineTurn({
+      sessionId: 'sess-chat-1', identity: TUPLE,
+      prompt: 'summarise the billing module and write a note',
+      events: trajectory('sess-chat-1'),
+    });
+    // Two tool_calls -> two actions; the read is a tool_call, the write a file_change.
+    expect(appended).toHaveLength(2);
+    expect(appended.map((a) => a.kind)).toEqual(['tool_call', 'file_change']);
+    for (const a of appended) {
+      expect(a.ownerId).toBe('entra:9f2a:6b1c');
+      expect(a.agentId).toBe('companion-chat');
+      expect(a.sessionId).toBe('sess-chat-1');
+    }
+
+    const w = store.world();
+    // Owner auto-created (first owner -> admin), session titled from the prompt.
+    expect(w.owners).toHaveLength(1);
+    expect(w.owners[0].id).toBe('entra:9f2a:6b1c');
+    expect(w.owners[0].role).toBe('admin');
+    expect(w.sessions).toHaveLength(1);
+    expect(w.sessions[0].id).toBe('sess-chat-1');
+    expect(w.sessions[0].title).toBe('summarise the billing module and write a note');
+    expect(w.agents).toHaveLength(1);
+    expect(w.agents[0].id).toBe('companion-chat');
+    expect(w.actions).toHaveLength(2);
+  });
+
+  it('is idempotent about session/agent identity across turns, appending only new actions', () => {
+    const store = getWorldStore(realEnv(dir));
+    store.recordEngineTurn({ sessionId: 'sess-chat-1', identity: TUPLE, prompt: 'first', events: trajectory('sess-chat-1') });
+    const second = store.recordEngineTurn({ sessionId: 'sess-chat-1', identity: TUPLE, prompt: 'second', events: trajectory('sess-chat-1') });
+    expect(second).toHaveLength(2);
+    const w = store.world();
+    expect(w.sessions).toHaveLength(1); // same session reused
+    expect(w.agents).toHaveLength(1);   // same agent reused
+    expect(w.actions).toHaveLength(4);  // two turns, two actions each
+    // Action ids are unique across turns.
+    expect(new Set(w.actions.map((a) => a.id)).size).toBe(4);
+  });
+
+  it('persists the recorded turn: a restart re-reads the actions, session and agent', () => {
+    const a = getWorldStore(realEnv(dir));
+    a.recordEngineTurn({ sessionId: 'sess-chat-1', identity: TUPLE, prompt: 'persist me', events: trajectory('sess-chat-1') });
+    resetWorldStore();
+    const b = getWorldStore(realEnv(dir));
+    const w = b.world();
+    expect(w.actions).toHaveLength(2);
+    expect(w.sessions).toHaveLength(1);
+    expect(w.agents).toHaveLength(1);
+  });
+
+  it('skips a trajectory with no tool steps but still records the session and agent', () => {
+    const store = getWorldStore(realEnv(dir));
+    const appended = store.recordEngineTurn({
+      sessionId: 'sess-quiet', identity: { ...TUPLE, sessionId: 'sess-quiet' },
+      prompt: 'hello',
+      events: [
+        { kind: 'session_start', sessionId: 'sess-quiet', seq: 0, ts: 1, status: 'ok' },
+        { kind: 'agent_message', sessionId: 'sess-quiet', seq: 1, ts: 2, text: 'hi there' },
+        { kind: 'session_end', sessionId: 'sess-quiet', seq: 2, ts: 3, status: 'ok' },
+      ],
+    });
+    expect(appended).toHaveLength(0);
+    const w = store.world();
+    expect(w.actions).toHaveLength(0);
+    expect(w.sessions).toHaveLength(1);
+    expect(w.agents).toHaveLength(1);
+  });
+});
+
 describe('SeededStore — the offline default', () => {
   afterEach(() => resetWorldStore());
+
+  it('recordEngineTurn is a no-op that keeps the seeded world byte-identical', () => {
+    resetWorldStore();
+    const store = getWorldStore({} as NodeJS.ProcessEnv);
+    const before = store.world();
+    const sessionsBefore = before.sessions.length;
+    const actionsBefore = before.actions.length;
+    const appended = store.recordEngineTurn({
+      sessionId: 'sess-chat-1', identity: TUPLE, prompt: 'ignored', events: trajectory('sess-chat-1'),
+    });
+    expect(appended).toEqual([]);
+    const after = store.world();
+    expect(after.sessions.length).toBe(sessionsBefore);
+    expect(after.actions.length).toBe(actionsBefore);
+  });
 
   it('reports dataSource "seeded" and a populated, finite world', () => {
     resetWorldStore();

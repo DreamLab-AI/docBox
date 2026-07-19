@@ -10,7 +10,9 @@
     "dev:server": "pnpm --filter @docbox/server dev",
     "build": "pnpm --filter @docbox/app build",
     "typecheck": "pnpm -r typecheck",
-    "start": "pnpm --filter @docbox/server start"
+    "start": "pnpm --filter @docbox/server start",
+    "launch": "bash scripts/launch.sh",
+    "doctor": "bash scripts/launch.sh doctor"
   },
   "engines": {
     "node": ">=24"

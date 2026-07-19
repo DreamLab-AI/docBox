@@ -31,8 +31,15 @@ moved, so those stale predictions have been removed rather than left to mislead.
   requirement that a desktop surface's consequential actions still route through the core audit
   contract (ADR-009). Write if the client brief wants native apps.
 - **PRD — chat surface.** The primary-user chat: the companion extension (ADR-007) is the
+<<<<<<< HEAD
   code-server path; a deep-chat bubble is the non-code-server path. Write when a host is chosen.
 - **ADR — terminology linker** (demonstrator). OpenMed does NER only; ADR-012 names scispaCy and
   ADR-013 the user-supplied terminology mount. If a site needs entity linking beyond embedded dm+d
   (a mounted SNOMED/UMLS release), promote the linker choice to its own ADR. Until then, dm+d plus
   code-free canonicalisation is the shipped floor.
+=======
+  code-server path; a deep-chat bubble is the non-code-server path. Both now exist in-repo — the
+  Companion is installed into code-server by the image build, and the dependency-free bubble widget
+  is served by the control plane at `/bubble` (M7). The PRD remains to be written when a host is
+  chosen, to settle the client-dashboard embed and how the two surfaces share one identity.
+>>>>>>> main

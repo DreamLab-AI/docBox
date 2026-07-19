@@ -150,6 +150,10 @@ app.post('/api/engine/prompt', async (c) => {
     model: typeof body.model === 'string' ? body.model : undefined,
     identity,
   });
+  // Fold the trajectory into the world (real mode only, via the store's own
+  // no-op): consequential tool steps become attributed actions the live
+  // /api/events stream carries into Foreman's Activity. Seeded mode returns [].
+  getWorldStore().recordEngineTurn({ sessionId, identity, prompt, events: result.events });
   await getAuditEmitter().emit(auditEvent('prompt', identity,
     { sessionId, ok: result.ok, chars: result.text.length }));
   return c.json(result);
@@ -190,13 +194,18 @@ app.post('/api/corpus/ask', async (c) => {
   return c.json({ ok: true, session });
 });
 
-// ── Companion chat (ADR-007) ─────────────────────────────────────────────────
+// ── Companion chat (ADR-007, ADR-005) ────────────────────────────────────────
 // The primary user's chat: a thin relay onto the same engine seam as
-// /api/engine/prompt, shaped for the Companion's Chat view — one JSON body
-// { ok, reply }. The view also accepts SSE, so when the pi streaming relay
-// lands (PRD-003) this route can upgrade without a client change. Attribution
-// comes from the auth headers (the primary user), never the body, and the turn
-// is audited like every other engine call.
+// /api/engine/prompt, shaped for the Companion's Chat view. Attribution comes
+// from the auth headers (the primary user), never the body; the turn is folded
+// into the world and audited exactly once, regardless of transport.
+//
+// Two transports, chosen by the Accept header — the engine call, recordEngineTurn
+// and the audit event all fire once BEFORE the transport branch:
+//   * Accept: text/event-stream — stream the trajectory as SSE data frames the
+//     Companion's chatView renders (each agent_message a delta), closed by the
+//     [DONE] sentinel its pipeStream reader expects (ADR-005, PRD-003).
+//   * otherwise (curl, tests) — the unchanged single JSON body { ok, reply }.
 app.post('/api/chat', async (c) => {
   const body = await c.req.json().catch(() => ({} as Record<string, unknown>));
   const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : '';
@@ -205,9 +214,51 @@ app.post('/api/chat', async (c) => {
   const owner = identityFromHeaders((n) => c.req.header(n));
   const identity = tupleFor(owner, { sessionId, agentId: 'companion-chat', actionId: `chat-${sessionId}` });
   const result = await getEngine().submitPrompt({ sessionId, prompt, identity });
+  // Record + audit fire exactly once, before the transport branches below.
+  getWorldStore().recordEngineTurn({ sessionId, identity, prompt, events: result.events });
   await getAuditEmitter().emit(auditEvent('prompt', identity,
     { sessionId, surface: 'companion', ok: result.ok, chars: result.text.length }));
+
+  const accept = c.req.header('accept') ?? '';
+  if (accept.includes('text/event-stream')) {
+    return streamSSE(c, async (stream) => {
+      // Emit the trajectory in order as data frames the view appends verbatim:
+      // each assistant message is one delta. The mock joins these into its reply,
+      // so the streamed turn reads as the reply built incrementally. Close with
+      // the [DONE] sentinel chatView's pipeStream stops on.
+      for (const e of result.events) {
+        if (e.kind === 'agent_message' && e.text) {
+          await stream.writeSSE({ data: e.text });
+        }
+      }
+      await stream.writeSSE({ data: '[DONE]' });
+    });
+  }
   return c.json({ ok: result.ok, reply: result.text });
+});
+
+// ── Chat bubble (M7, embeddable widget) ──────────────────────────────────────
+// The control plane serves a dependency-free chat-bubble widget and its demo
+// page from server/public (the assets ship separately). Both are same-origin
+// static reads: an external dashboard that embeds bubble.js sets
+// DOCBOX_ALLOWED_ORIGIN so its /api/chat POSTs pass the /api/* CORS above; the
+// demo page here is same-origin so it needs no CORS change. The public dir is
+// resolved at request time (DOCBOX_PUBLIC_DIR overrides the default) and read
+// fresh from disk, 404 with a plain message when an asset is absent.
+function publicDir(): string {
+  return process.env.DOCBOX_PUBLIC_DIR ?? join(here, '../public');
+}
+
+app.get('/bubble', (c) => {
+  const file = join(publicDir(), 'bubble.html');
+  if (!existsSync(file)) return c.text('bubble.html not found', 404);
+  return c.body(readFileSync(file, 'utf8'), 200, { 'content-type': 'text/html; charset=utf-8' });
+});
+
+app.get('/bubble.js', (c) => {
+  const file = join(publicDir(), 'bubble.js');
+  if (!existsSync(file)) return c.text('bubble.js not found', 404);
+  return c.body(readFileSync(file, 'utf8'), 200, { 'content-type': 'text/javascript; charset=utf-8' });
 });
 
 // ── Configuration as TOML ────────────────────────────────────────────────────
