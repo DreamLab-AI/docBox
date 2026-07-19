@@ -19,6 +19,8 @@ import { AuditSection } from './AuditSection';
 import { VaultsSection } from './VaultsSection';
 import { ConfirmDialog } from './ConfirmDialog';
 import { store } from '../../data/adapter';
+import * as live from '../../data/live';
+import { SIMULATED_NOTE } from '../../ui/demo';
 
 // Deterministic mock facts, read (never written) via the store seam.
 const AUDIT = store.audit();
@@ -431,6 +433,26 @@ describe('ConfirmDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Proceed' }));
     await advance(520 * 4);
     expect(screen.getByText('All done.')).toBeInTheDocument();
+  });
+
+  // Demo-erasure invariant, done phase: the success reads as a real operation
+  // (rollback / vault lock-unlock), so it must carry the simulated note in demo
+  // mode and lose it the instant live data is real.
+  it('shows the simulated-run note in the done phase while in demo mode', async () => {
+    render(<ConfirmDialog {...baseProps} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Proceed' }));
+    await advance(520 * 4);
+    expect(screen.getByText('All done.')).toBeInTheDocument();
+    expect(screen.getByText(SIMULATED_NOTE)).toBeInTheDocument();
+  });
+
+  it('omits the simulated note in the done phase once live data is real', async () => {
+    vi.spyOn(live, 'liveStatus').mockReturnValue('live');
+    render(<ConfirmDialog {...baseProps} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Proceed' }));
+    await advance(520 * 4);
+    expect(screen.getByText('All done.')).toBeInTheDocument();
+    expect(screen.queryByText(SIMULATED_NOTE)).toBeNull();
   });
 
   it('cancels via the Cancel button', () => {

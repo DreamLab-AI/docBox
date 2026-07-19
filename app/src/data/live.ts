@@ -15,9 +15,21 @@ const API = import.meta.env.VITE_API_BASE ?? '';
 export type LiveStatus = 'live' | 'degraded' | 'mock';
 let currentStatus: LiveStatus = 'mock';
 
+/** Whether live data is a real datastore or the server re-serving the mock module.
+ *  The server knows which it is and declares it on /api/world (dataSource); today
+ *  it is always 'seeded' because /api/world re-serves the mock world. The live
+ *  strip branches on this so a green 'live' badge over seeded data stays honest. */
+export type DataSource = 'seeded' | 'real';
+let currentDataSource: DataSource = 'seeded';
+
 /** The real live/degraded/mock state after boot. Drives the TopBar badge. */
 export function liveStatus(): LiveStatus {
   return currentStatus;
+}
+
+/** The provenance of live data after boot: seeded (mock module) or a real store. */
+export function dataSource(): DataSource {
+  return currentDataSource;
 }
 
 /** Fetch and install the world. Returns true if live data was loaded. */
@@ -29,9 +41,12 @@ export async function bootstrapWorld(): Promise<boolean> {
   try {
     const res = await fetch(`${API}/api/world`);
     if (!res.ok) throw new Error(`world fetch ${res.status}`);
-    const data = (await res.json()) as World;
+    const data = (await res.json()) as World & { dataSource?: DataSource };
     hydrate(data);
     currentStatus = 'live';
+    // The server declares whether it served a real datastore or the seeded mock
+    // module; default to 'seeded' since that is what /api/world serves today.
+    currentDataSource = data.dataSource === 'real' ? 'real' : 'seeded';
     return true;
   } catch (err) {
     console.warn('[docBox] live world unavailable, using mock:', (err as Error).message);

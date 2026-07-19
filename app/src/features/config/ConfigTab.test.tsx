@@ -1,9 +1,15 @@
 // Configuration tab suite. Drives the REAL ConfigTab against the frozen mock
 // world (store.config()); nothing is stubbed. Editing is local React state, so
 // tests are isolated by the afterEach cleanup in test/setup.ts.
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import ConfigTab from './ConfigTab';
+import * as live from '../../data/live';
+import { SIMULATED_NOTE } from '../../ui/demo';
+
+// Spies (used by the demo-erasure cases below) are restored between tests; the
+// rest of the suite runs in the default mock plane where isDemo() is true.
+afterEach(() => vi.restoreAllMocks());
 
 describe('ConfigTab — sub-tab strip', () => {
   it('renders a tab for every section that has options, including Interface', () => {
@@ -291,6 +297,29 @@ describe('ConfigTab — controls per option type', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'add' }));
     expect(screen.getAllByText('enter.com')).toHaveLength(1);
+  });
+});
+
+describe('ConfigTab — demo-erasure invariant', () => {
+  // The pending drawer's apply/rebuild controls read as real operations, and the
+  // seeded secret/identity rows read as the box's real provisioned values. Both
+  // must be tagged in demo mode and both must vanish once live data is real.
+  it('notes the apply action as simulated and flags seeded secrets as example (demo mode)', () => {
+    render(<ConfigTab />);
+    // The Anthropic API key (a secret on the default Providers tab) is flagged.
+    expect(screen.getAllByText('example').length).toBeGreaterThanOrEqual(1);
+    // Stage a change so the sticky drawer (with the apply note) appears.
+    fireEvent.click(screen.getAllByRole('switch')[0]);
+    expect(screen.getByText(SIMULATED_NOTE)).toBeInTheDocument();
+  });
+
+  it('drops the simulated apply note and the example tags once live data is real', () => {
+    vi.spyOn(live, 'liveStatus').mockReturnValue('live');
+    render(<ConfigTab />);
+    expect(screen.queryByText('example')).toBeNull();
+    fireEvent.click(screen.getAllByRole('switch')[0]);
+    expect(screen.getByText(/1 staged change/)).toBeInTheDocument(); // drawer is open…
+    expect(screen.queryByText(SIMULATED_NOTE)).toBeNull();            // …but not tagged
   });
 });
 

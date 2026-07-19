@@ -6,6 +6,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import WorkTab from './WorkTab';
 import { store } from '../../data/adapter';
+import * as live from '../../data/live';
 import { readyQueue, gatedBeads, computeGraph } from './layout';
 
 const beads = store.beads();
@@ -105,6 +106,27 @@ describe('WorkTab — gates and approval', () => {
     expect(toast).toHaveTextContent(/signed off/);
     fireEvent.click(within(toast).getByRole('button', { name: 'Dismiss' }));
     expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  // Demo-erasure invariant on the sign-off toast: the toast reads as a real
+  // operation ('signed off — the overhaul may now proceed'), so it must carry the
+  // Simulated tag in demo mode and drop it once live data is real.
+  it('tags the sign-off toast as Simulated while in demo mode', () => {
+    render(<WorkTab />);
+    const gatesPanel = panel('Gates');
+    fireEvent.click(within(gatesPanel).getByRole('button', { name: 'Approve overhaul' }));
+    const toast = screen.getByRole('status');
+    expect(within(toast).getByText('Simulated')).toBeInTheDocument();
+    expect(within(toast).getByText(/not a real operation/i)).toBeInTheDocument();
+  });
+
+  it('drops the Simulated tag from the sign-off toast once live data is real', () => {
+    vi.spyOn(live, 'liveStatus').mockReturnValue('live');
+    render(<WorkTab />);
+    const gatesPanel = panel('Gates');
+    fireEvent.click(within(gatesPanel).getByRole('button', { name: 'Approve overhaul' }));
+    const toast = screen.getByRole('status');
+    expect(within(toast).queryByText('Simulated')).toBeNull();
   });
 });
 

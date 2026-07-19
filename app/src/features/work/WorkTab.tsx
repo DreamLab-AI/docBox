@@ -6,6 +6,7 @@ import type { CSSProperties } from 'react';
 import type { BeadInfo, BeadStatus, GateKind, Owner } from '../../domain/types';
 import { store } from '../../data/adapter';
 import { Panel, OwnerDot, StatusPip, WhenToUse, EmptyState, fmtAgo } from '../../ui/primitives';
+import { isDemo, DemoTag } from '../../ui/demo';
 import {
   computeGraph, readyQueue, gatedBeads, openBlockers, isUnblocked,
   countByStatus, countByOwner, STATUS_ORDER, NODE_W, NODE_H,
@@ -371,6 +372,7 @@ export default function WorkTab() {
           <span aria-hidden style={{ color: 'var(--green)', fontSize: 'var(--fs-lg)' }}>✓</span>
           <span style={{ fontSize: 'var(--fs-sm)' }}>
             <strong className="mono">{toast}</strong> signed off. The overhaul may now proceed.
+            {isDemo() && <> <DemoTag /></>}
           </span>
           <button type="button" className="btn" style={{ padding: '2px 8px' }} onClick={() => setToast(null)} aria-label="Dismiss">×</button>
         </div>
