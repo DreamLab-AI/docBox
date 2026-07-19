@@ -6,6 +6,19 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
+// Node >= 25 defines a global `localStorage` binding that is undefined unless
+// the process runs with --localstorage-file; because the key already exists,
+// vitest's jsdom environment leaves it in place and it shadows jsdom's working
+// implementation. Restore the DOM one so bare `localStorage` (app code and
+// tests alike) reaches jsdom's store on every Node version.
+if (!globalThis.localStorage && typeof window !== 'undefined' && window.localStorage) {
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: window.localStorage,
+    configurable: true,
+    writable: true,
+  });
+}
+
 afterEach(() => {
   cleanup();
   localStorage.clear();
