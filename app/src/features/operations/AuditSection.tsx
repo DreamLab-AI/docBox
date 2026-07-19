@@ -71,16 +71,11 @@ export function AuditSection() {
         </button>
       }
     >
-      {/* This trail is seeded demo data, not a live sidecar — flag it plainly so the
-          hash chain is never read as a real audit record. */}
+      {/* The shared DemoChip on the panel heading already flags this as demo data,
+          so no bespoke badge here (one marker per surface). Keep the M6-specific
+          caption as panel detail — it says what is still to come, not just that it
+          is seeded. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', flexWrap: 'wrap', margin: '0 0 var(--s-4)' }}>
-        <span
-          className="badge"
-          title="Seeded demo data. The real write-only, hash-chained audit sidecar arrives at M6; these records are generated in-app for the walkthrough."
-          style={{ color: 'var(--amber)', borderColor: 'color-mix(in srgb, var(--amber) 45%, transparent)', background: 'color-mix(in srgb, var(--amber) 12%, transparent)', fontWeight: 700 }}
-        >
-          DEMO DATA
-        </span>
         <span className="muted" style={{ fontSize: 'var(--fs-xs)' }}>
           Seeded records for the walkthrough — the write-only hash-chained sidecar arrives at M6.
         </span>

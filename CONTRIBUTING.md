@@ -25,6 +25,12 @@ pnpm install
 pnpm dev        # http://localhost:5173
 ```
 
+For what the interface shows on first run — the demo world, the eight-tab loop,
+and how to tell mock from live — read [docs/getting-started.md](docs/getting-started.md).
+The mock-to-live path (dev-live and host) is in
+[docs/mock-to-live.md](docs/mock-to-live.md). The rest of this section is the
+contributor checks.
+
 Before you push, run the same checks CI runs:
 
 ```bash

@@ -4,6 +4,7 @@ import { liveStatus, subscribeActions } from './data/live';
 import { OwnerTag, StatusPip, fmtAgo } from './ui/primitives';
 import { PanelBoundary } from './ui/PanelBoundary';
 import { useUiState } from './ui/uiState';
+import { DemoBanner, DemoChip, WelcomeDialog, isDemo } from './ui/demo';
 // The tab set is the validated panel registry (ADR-010), not an inline literal:
 // one typed, agent-editable source of truth, checked at compile time (a missing
 // component fails tsc) and at load time (a malformed manifest is rejected).
@@ -13,6 +14,10 @@ export function App() {
   // Active tab persists across HMR and reloads (ADR-008): an agent editing a
   // live panel, or a hot reload, never bumps the user off what they were viewing.
   const [tab, setTab] = useUiState<PanelId>('activeTab', 'overview');
+  // First-run onboarding: the WelcomeDialog shows once, then this latches so it
+  // never steals focus again. The demo strip's 'How to go live' re-opens it by
+  // clearing this, so App owns the single source of truth (both surfaces read it).
+  const [firstRunSeen, setFirstRunSeen] = useUiState('firstRunSeen', false);
   // In live mode, new actions arriving over SSE bump this counter, which
   // re-renders the active tab so it re-reads the store and shows the arrival.
   const [, setLiveTick] = useState(0);
@@ -48,7 +53,7 @@ export function App() {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateRows: 'auto auto 1fr', height: '100%' }}>
+    <div style={{ display: 'grid', gridTemplateRows: 'auto auto auto 1fr', height: '100%' }}>
       <TopBar />
       {/* <nav> stays a real navigation landmark; the tablist role lives on an
           inner div so it does not clobber the landmark (ADR: a11y contract). */}
@@ -77,6 +82,9 @@ export function App() {
           })}
         </div>
       </nav>
+      {/* Persistent honesty strip between the nav and main. It self-erases on real
+          live data (the wrapper node stays so <main> keeps its 1fr grid track). */}
+      <DemoBanner onHowToGoLive={() => setFirstRunSeen(false)} />
       {/* <main> stays a real main landmark; the tabpanel role lives on the inner
           div, labelled by the active tab and focusable so activation announces it. */}
       <main style={{ overflow: 'auto', padding: 'var(--s-5)', background: 'var(--bg-0)' }}>
@@ -84,7 +92,12 @@ export function App() {
           aria-labelledby={`tab-${active.id}`} tabIndex={-1}
           style={{ maxWidth: 1400, margin: '0 auto', outline: 'none' }}>
           <div style={{ marginBottom: 'var(--s-4)' }}>
-            <h2 style={{ margin: 0, fontSize: 'var(--fs-2xl)', fontWeight: 680, letterSpacing: '-0.01em' }}>{active.label}</h2>
+            {/* DemoChip sits OUTSIDE the <h2> so heading-by-name queries stay exact;
+                one insertion flags all eight panels while the world is not live. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}>
+              <h2 style={{ margin: 0, fontSize: 'var(--fs-2xl)', fontWeight: 680, letterSpacing: '-0.01em' }}>{active.label}</h2>
+              <DemoChip />
+            </div>
             <p className="muted" style={{ margin: '2px 0 0' }}>{active.hint}</p>
           </div>
           {/* Each panel is functionally isolated: a fault here is contained to
@@ -92,6 +105,9 @@ export function App() {
           <PanelBoundary name={active.label}>{active.render()}</PanelBoundary>
         </div>
       </main>
+      {/* One-time first-run overlay. position:fixed, so its grid placement is moot.
+          Shown only while the world is not live and the run has not been seen. */}
+      <WelcomeDialog open={isDemo() && !firstRunSeen} onClose={() => setFirstRunSeen(true)} />
     </div>
   );
 }
@@ -103,7 +119,7 @@ export function App() {
 const BADGE: Record<'live' | 'degraded' | 'mock', { text: string; colour: string; title: string }> = {
   live:     { text: 'live',    colour: 'var(--green)',       title: 'Live data from the control-plane server' },
   degraded: { text: 'offline', colour: 'var(--amber)',       title: 'Showing mock data — control-plane unreachable' },
-  mock:     { text: 'mock',    colour: 'var(--line-strong)', title: 'Deterministic mock world (offline)' },
+  mock:     { text: 'mock',    colour: 'var(--demo)',        title: 'Deterministic mock world (offline)' },
 };
 
 function TopBar() {

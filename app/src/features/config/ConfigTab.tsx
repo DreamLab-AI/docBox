@@ -10,6 +10,7 @@ import { useMemo, useState } from 'react';
 import type { ConfigOption, ConfigTabId, PendingChange, ApplyClass } from '../../domain/types';
 import { store, applyClassHelp } from '../../data/adapter';
 import { Panel, ApplyBadge, WhenToUse, EmptyState } from '../../ui/primitives';
+import { isDemo, DemoTag, SIMULATED_NOTE } from '../../ui/demo';
 import { ConfigRow } from './controls';
 import { RebuildPlan } from './RebuildPlan';
 import {
@@ -69,16 +70,30 @@ export default function ConfigTab() {
     : [];
   const matchTabs = TAB_ORDER.filter((id) => matches.some((m) => m.tab === id));
 
-  const renderRow = (opt: ConfigOption) => (
-    <ConfigRow
-      key={opt.key}
-      opt={opt}
-      value={displayValue(opt, applied, edits)}
-      dirty={edits.has(opt.key) && !valueEquals(effectiveValue(opt, applied), edits.get(opt.key)!)}
-      onChange={(v) => stageEdit(opt, v)}
-      onReset={() => resetEdit(opt.key)}
-    />
-  );
+  const renderRow = (opt: ConfigOption) => {
+    const row = (
+      <ConfigRow
+        key={opt.key}
+        opt={opt}
+        value={displayValue(opt, applied, edits)}
+        dirty={edits.has(opt.key) && !valueEquals(effectiveValue(opt, applied), edits.get(opt.key)!)}
+        onChange={(v) => stageEdit(opt, v)}
+        onReset={() => resetEdit(opt.key)}
+      />
+    );
+    // Seeded secrets and identity strings (the masked sk-ant key, the Entra tenant
+    // id) must not read as the box's real provisioned values — flag them 'example'.
+    const seeded = opt.type === 'secret' || (opt.tab === 'identity' && opt.type === 'string');
+    if (!isDemo() || !seeded) return row;
+    return (
+      <div key={opt.key}>
+        {row}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: 'var(--s-2)' }}>
+          <DemoTag variant="example" />
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div style={{ display: 'grid', gap: 'var(--s-4)' }}>
@@ -240,6 +255,11 @@ function PendingDrawer({ pending, liveSessionCount, rebuildCount, onApplyLiveSes
           </button>
         )}
       </div>
+      {/* Applying and rebuilding are simulated against the demo world — no config
+          is written and no image is built. Say so where the operator acts. */}
+      {isDemo() && (
+        <p className="muted" style={{ flexBasis: '100%', margin: 0, fontSize: 'var(--fs-xs)' }}>{SIMULATED_NOTE}</p>
+      )}
     </div>
   );
 }

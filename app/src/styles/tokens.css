@@ -23,6 +23,7 @@
   --amber: #f0a53a;       /* session-apply, pending */
   --rose: #f0596b;        /* rebuild, danger, failed */
   --green: #46c273;       /* ok, promoted */
+  --demo: #b48cff;        /* demo/seeded tell — violet-leaning, distinct from --amber (degraded) and --accent (live) */
 
   /* Apply-class semantic colours (the product's core distinction) */
   --apply-hot: var(--violet);

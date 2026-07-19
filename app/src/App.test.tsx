@@ -1,7 +1,7 @@
 // Tests for the App shell in the default (mock) data mode: the 8-tab tablist,
 // tab selection + panel swap, the top bar's mock badge and stack info, and the
 // active-tab persistence to localStorage that survives a re-mount.
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, cleanup } from '@testing-library/react';
 import { App } from './App';
 import { IS_LIVE } from './data/live';
@@ -28,6 +28,14 @@ beforeAll(() => {
 afterAll(() => {
   errSpy.mockRestore();
   warnSpy.mockRestore();
+});
+
+// Seed the first-run flag so the one-time WelcomeDialog — a focus-trapping modal
+// that mounts while isDemo() && !firstRunSeen — never opens during these shell and
+// a11y assertions and steals focus from the roving-tabindex / focus-into-panel
+// checks. setup.ts clears localStorage per-afterEach, so this must run per-test.
+beforeEach(() => {
+  localStorage.setItem('docbox.ui.firstRunSeen', JSON.stringify(true));
 });
 
 describe('App shell', () => {

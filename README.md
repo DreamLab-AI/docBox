@@ -10,6 +10,9 @@ browser.
 
 This README is the map: what the product is, what is built, and where each piece lives.
 
+New here? The [getting-started guide](docs/getting-started.md) is a 60-second first-run tour, and the
+[glossary](docs/glossary.md) defines every term on one screen.
+
 Two rules shape every decision, both from the client:
 
 - **A distillation, not agentbox.** A plain container with few moving parts and TOML-gated
@@ -81,7 +84,7 @@ keeps it a tenth of agentbox's surface.
 
 | Layer | Status | Where |
 |---|---|---|
-| **Foreman UI** — eight-tab control plane | Built, verified | `app/` |
+| **Foreman UI** — eight-tab control plane | UI built (mock); host-runtime pending | `app/` |
 | **Control-plane server** — Hono, serves the world + SSE, TOML config, documents | Built, verified | `server/` |
 | **Companion extension** — code-server sidebar (chat + documents) | Scaffolded, compile-checked | `extension/` |
 | **Container definitions** — control-plane / audit / vault / browser images, egress firewall, oauth2-proxy | Written, compose-validated (images build on a host; DinD) | `docker/`, `scripts/` |
@@ -90,14 +93,17 @@ keeps it a tenth of agentbox's surface.
 | Identity (Entra + oauth2-proxy), tunnels, vaults, chat bubble | Specified; config written, host-runtime | `docs/`, `docker/` |
 
 Foreman runs against a mock world by default (offline, deterministic) and, with
-`VITE_DATA_MODE=live`, hydrates from the control-plane server instead. The feature modules never
-change when data goes live: they read a synchronous adapter seam, and only that seam knows whether
-data is mock or live. That is the promise [ADR-001](docs/reference/adr/ADR-001-stack-and-mock-first.md)
-makes, now proven end to end.
+`VITE_DATA_MODE=live`, hydrates from the control-plane server instead — which, in dev, re-serves the
+same seeded world ([mock-to-live](docs/mock-to-live.md) walks the three rungs from demo to real). The
+feature modules never change when data goes live: they read a synchronous adapter seam, and only that
+seam knows whether data is mock or live. That is the promise
+[ADR-001](docs/reference/adr/ADR-001-stack-and-mock-first.md) makes: the seam is proven; live host
+behaviour is M3–M6 host-runtime.
 
 ## Foreman — the tabs
 
-Each opens with plain guidance on when and why to use it.
+Each opens with plain guidance on when and why to use it. In demo mode (the default) every figure
+below is from the seeded mock world.
 
 | Tab | What it answers | When to use it |
 |---|---|---|
@@ -158,6 +164,13 @@ docBox/
 
 ## Running it
 
+> **What you'll see on first run.** `pnpm dev:app` opens a fabricated demo world — every owner,
+> agent, action and document is invented; nothing is real until you go live. Two tells confirm it: a
+> **demo banner** across the top of every screen, and the header's **`mock` badge** recoloured to the
+> demo tint. Both self-erase the moment real control-plane data hydrates. New to the box? Take the
+> [getting-started tour](docs/getting-started.md); [mock-to-live](docs/mock-to-live.md) explains the
+> three rungs; [troubleshooting](docs/troubleshooting.md) covers the first-run snags.
+
 ```bash
 pnpm install
 
@@ -173,6 +186,15 @@ The container image builds on a real host with Docker, not in this dev environme
 bind-mount limitation). See [docker/README.md](docker/README.md) for the build and run sequence.
 
 ## Documents
+
+Operator guides — start here:
+
+- [Getting started](docs/getting-started.md) — a 60-second first-run tour of the demo world and the eight-tab loop.
+- [Mock to live](docs/mock-to-live.md) — the three rungs from the offline demo to a real datastore, and why a `live` badge can sit over seeded data.
+- [Glossary](docs/glossary.md) — every term on one screen: owner, session, agent, action, apply-class, snapshot, bead, gate, audit record.
+- [Troubleshooting](docs/troubleshooting.md) — the five things most likely to snag a first run.
+
+Reference record:
 
 - [PRD-000 — Product shape and roadmap](docs/reference/prd/PRD-000-product-shape.md)
 - PRD [001 control plane](docs/reference/prd/PRD-001-control-plane.md) ·

@@ -4,6 +4,7 @@
 // completes so the caller can commit its own local state.
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { isDemo, SIMULATED_NOTE } from '../../ui/demo';
 
 type Phase = 'confirm' | 'running' | 'done';
 
@@ -178,6 +179,11 @@ export function ConfirmDialog({
               }}>✓</span>
               <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--fg-0)' }}>{doneMessage}</span>
             </div>
+            {/* The run was simulated (see the module header). Say so plainly in the
+                demo so the success is read as a walkthrough, not a real operation. */}
+            {isDemo() && (
+              <p className="muted" style={{ margin: 'var(--s-3) 0 0', fontSize: 'var(--fs-xs)' }}>{SIMULATED_NOTE}</p>
+            )}
             <footer style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--s-5)' }}>
               <button className="btn btn-primary" onClick={onClose} autoFocus>Done</button>
             </footer>

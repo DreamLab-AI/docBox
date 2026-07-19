@@ -121,6 +121,11 @@ describe('GET /api/world', () => {
     expect(body.system).toMatchObject({ activeStack: systemStatus.activeStack });
     expect(body.now).toBe(NOW);
 
+    // The world is the mock module, so the server declares its provenance as
+    // seeded. The UI's live strip branches on this to stay honest — a green
+    // 'live' badge over seeded data must read as seeded, not real.
+    expect(body.dataSource).toBe('seeded');
+
     // timeWindow is [minActionTs, max(maxActionTs, NOW)].
     expect(body.timeWindow).toHaveLength(2);
     const [lo, hi] = body.timeWindow;

@@ -10,6 +10,9 @@ vi.mock('./data/live', () => ({
   IS_LIVE: true,
   subscribeActions: vi.fn(() => vi.fn()),
   liveStatus: vi.fn(() => 'live'),
+  // The demo layer reads dataSource() to keep the live strip honest about seeded
+  // data; default 'seeded' (what the dev server serves today).
+  dataSource: vi.fn(() => 'seeded'),
 }));
 
 import { App } from './App';
@@ -23,6 +26,12 @@ const bar = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Restore the mock defaults cleared above, and seal first-run so the one-time
+  // WelcomeDialog never mounts during these badge checks (it would in the 'mock'
+  // and 'degraded' cases, since isDemo() is true there).
+  vi.mocked(live.liveStatus).mockReturnValue('live');
+  vi.mocked(live.dataSource).mockReturnValue('seeded');
+  localStorage.setItem('docbox.ui.firstRunSeen', JSON.stringify(true));
 });
 
 describe('App shell — TopBar badge reflects the real data plane', () => {
@@ -57,5 +66,36 @@ describe('App shell — TopBar badge reflects the real data plane', () => {
     expect(badge).toHaveAttribute('title', 'Deterministic mock world (offline)');
     expect(bar().queryByText('live')).toBeNull();
     expect(bar().queryByText('offline')).toBeNull();
+  });
+});
+
+// The gating invariant made observable: the demo layer erases on genuinely real
+// data, but stays honest while live data is only seeded.
+describe('App shell — the demo layer self-suppresses on real live data', () => {
+  it('renders no demo banner or chip when live data is real', () => {
+    vi.mocked(live.liveStatus).mockReturnValue('live');
+    vi.mocked(live.dataSource).mockReturnValue('real');
+    render(<App />);
+    // The header still tells the plane truth (that is not a demo tell)…
+    expect(bar().getByText('live')).toBeInTheDocument();
+    // …but every demo surface is gone: no DemoChip, no banner copy.
+    expect(screen.queryByText('DEMO DATA')).toBeNull();
+    expect(screen.queryByText(/fabricated/i)).toBeNull();
+    expect(screen.queryByText(/Seeded:/)).toBeNull();
+  });
+
+  it('keeps the honest seeded strip, but no chip, when live data is only seeded', () => {
+    vi.mocked(live.liveStatus).mockReturnValue('live');
+    vi.mocked(live.dataSource).mockReturnValue('seeded');
+    render(<App />);
+    expect(screen.getByText(/Seeded: the dev server serves the mock world/i)).toBeInTheDocument();
+    // The chip means 'not live'; live-seeded is still live, so it does not show.
+    expect(screen.queryByText('DEMO DATA')).toBeNull();
+  });
+
+  it('shows the DemoChip on the panel heading when not live', () => {
+    vi.mocked(live.liveStatus).mockReturnValue('mock');
+    render(<App />);
+    expect(screen.getByText('DEMO DATA')).toBeInTheDocument();
   });
 });

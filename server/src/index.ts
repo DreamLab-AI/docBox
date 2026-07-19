@@ -39,6 +39,11 @@ app.use('/api/*', cors({ origin: ALLOWED_ORIGIN }));
 app.get('/api/world', (c) =>
   c.json({
     now: NOW,
+    // The world is the app's mock module (see imports above), so the data is
+    // seeded, not a real datastore. Declared explicitly so the UI's live strip
+    // can stay honest — a green 'live' badge over seeded data reads as seeded.
+    // Swapping to a real store later flips this to 'real'.
+    dataSource: 'seeded',
     owners, sessions, agents, elements, actions,
     config: configOptions, snapshots, beads, audit, vaults, documents, modules,
     system: systemStatus,
