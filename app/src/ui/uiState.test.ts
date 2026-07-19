@@ -42,14 +42,30 @@ describe('useUiState', () => {
   });
 
   it('swallows a storage write failure (quota/blocked) without throwing', () => {
-    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new DOMException('QuotaExceededError');
-    });
-    const { result } = renderHook(() => useUiState('big', 'v'));
-    // The mount effect already tried (and swallowed) a write.
-    expect(setItem).toHaveBeenCalled();
-    // A further change still updates in-session state despite the throwing setter.
-    expect(() => act(() => result.current[1]('v2'))).not.toThrow();
-    expect(result.current[0]).toBe('v2');
+    // Swap the global for a throwing Storage rather than spying: jsdom's
+    // localStorage is a Proxy that treats property writes as stored items, and
+    // the Node >= 25 setup shim has no Storage.prototype — replacing the global
+    // binding is the one approach that behaves identically in both.
+    const original = globalThis.localStorage;
+    let attempts = 0;
+    const throwing: Storage = {
+      get length() { return 0; },
+      key: () => null,
+      getItem: () => null,
+      setItem: () => { attempts += 1; throw new DOMException('QuotaExceededError'); },
+      removeItem: () => {},
+      clear: () => {},
+    };
+    Object.defineProperty(globalThis, 'localStorage', { value: throwing, configurable: true, writable: true });
+    try {
+      const { result } = renderHook(() => useUiState('big', 'v'));
+      // The mount effect already tried (and swallowed) a write.
+      expect(attempts).toBeGreaterThan(0);
+      // A further change still updates in-session state despite the throwing setter.
+      expect(() => act(() => result.current[1]('v2'))).not.toThrow();
+      expect(result.current[0]).toBe('v2');
+    } finally {
+      Object.defineProperty(globalThis, 'localStorage', { value: original, configurable: true, writable: true });
+    }
   });
 });
