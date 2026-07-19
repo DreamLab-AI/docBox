@@ -452,7 +452,7 @@ EOF
   if command -v pnpm >/dev/null 2>&1; then
     drow PASS "pnpm present" "$(pnpm --version 2>/dev/null || echo "?")"
   else
-    drow WARN "pnpm present" "not found - install pnpm, then pnpm install"
+    drow WARN "pnpm present" "not found - npm install --global --prefix ~/.local pnpm (no sudo; Node >= 25 no longer bundles corepack)"
   fi
 
   # dependencies

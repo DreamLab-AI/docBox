@@ -215,13 +215,16 @@ docBox/
 > [getting-started tour](docs/getting-started.md); [mock-to-live](docs/mock-to-live.md) explains the
 > three rungs; [troubleshooting](docs/troubleshooting.md) covers the first-run snags.
 
-The guided way — `pnpm launch` walks the three rungs (demo → dev-live → one-port built),
-prints what will run, the URLs and how to stop, then starts nothing you did not pick:
+The guided way — the launcher walks the three rungs (demo → dev-live → one-port built),
+prints what will run, the URLs and how to stop, then starts nothing you did not pick. It is
+plain bash, so it works before anything is installed — start with its `doctor`:
 
 ```bash
+./scripts/launch.sh doctor          # environment check (Node, pnpm, ports, app/dist)
+# no pnpm? the no-sudo install (Node >= 25 no longer bundles corepack):
+#   npm install --global --prefix ~/.local pnpm
 pnpm install
 pnpm launch                         # guided menu: demo · dev · real · up · companion · host
-pnpm launch doctor                  # environment check (Node, pnpm, ports, app/dist)
 pnpm launch configure               # write a git-ignored .env.docbox of dev defaults
 ```
 

@@ -6,6 +6,29 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
+// Node >= 25 defines a global `localStorage` accessor that yields undefined
+// unless the process runs with --localstorage-file; because the key already
+// exists on the global, vitest's jsdom environment skips copying jsdom's
+// working implementation over it — and in this environment `window` IS the
+// populated global, so there is no separate jsdom store to reach for. Install
+// a minimal in-memory Storage so bare `localStorage` works on every Node.
+if (!globalThis.localStorage) {
+  const backing = new Map<string, string>();
+  const shim: Storage = {
+    get length() { return backing.size; },
+    key: (i: number) => [...backing.keys()][i] ?? null,
+    getItem: (k: string) => backing.get(String(k)) ?? null,
+    setItem: (k: string, v: string) => void backing.set(String(k), String(v)),
+    removeItem: (k: string) => void backing.delete(String(k)),
+    clear: () => backing.clear(),
+  };
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: shim,
+    configurable: true,
+    writable: true,
+  });
+}
+
 afterEach(() => {
   cleanup();
   localStorage.clear();
