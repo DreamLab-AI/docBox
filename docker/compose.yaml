@@ -129,9 +129,17 @@ services:
       FOREMAN_CONFIG: "/etc/docbox/foreman.toml"
       AUDIT_INGEST_URL: "http://audit-sidecar:9099/v1/events"
       AGENT_HOST: "agent"
+      # The built host stack is the real rung: a genuine JSON-file datastore, not
+      # the seeded mock. DOCBOX_DATA=real selects the RealStore; it starts empty
+      # and the first /api/provision brings it to life. DOCBOX_DATA_DIR points at
+      # the docbox-world volume below so the world survives restarts and swaps.
+      DOCBOX_DATA: "real"
+      DOCBOX_DATA_DIR: "/var/lib/docbox/world"
+      DOCBOX_IMAGE_TAG: "${DOCBOX_TAG:-dev}"          # honest system.imageTag in /api/world
     volumes:
       - ./foreman.toml:/etc/docbox/foreman.toml:ro   # the manifest the UI edits
       - docbox-system:/var/lib/docbox/system         # System-Definition plane
+      - docbox-world:/var/lib/docbox/world           # control-plane world datastore (User-Data plane)
     ports:
       - "127.0.0.1:${CONTROL_PLANE_PORT:-8788}:8788"
     read_only: true
@@ -416,6 +424,7 @@ networks:
 
 volumes:
   docbox-system:      # System-Definition plane — rollback target
+  docbox-world:       # control-plane world datastore (owners/vaults/actions) — User-Data plane, never a rollback target
   docbox-user-data:   # User-Data plane — never a rollback target
   docbox-audit:       # Audit plane — append-only WORM, never a rollback target
   docbox-vaults:      # gocryptfs cipherdirs

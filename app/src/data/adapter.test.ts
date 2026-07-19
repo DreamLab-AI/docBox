@@ -140,6 +140,17 @@ describe('pushAction', () => {
     expect(mock.actions).toHaveLength(originalLength);
     expect(store.actions()).toHaveLength(originalLength + 1);
   });
+
+  it('ignores a re-delivered action whose id is already in the world (hydrate/stream overlap)', () => {
+    // A snapshot fetched after a mutation (e.g. /api/provision returning the
+    // world) already contains the action the SSE stream then re-delivers; the
+    // duplicate must not double-count.
+    hydrate(mkWorld({ actions: [action('a', 100)] }));
+    pushAction(action('a', 100));
+    expect(store.actions()).toHaveLength(1);
+    pushAction(action('b', 200));
+    expect(store.actions().map((x) => x.id)).toEqual(['a', 'b']);
+  });
 });
 
 describe('applyClass maps', () => {

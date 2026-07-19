@@ -57,6 +57,34 @@ export async function bootstrapWorld(): Promise<boolean> {
   }
 }
 
+/** Provision the first real project on an empty live datastore. POSTs to the
+ *  control plane (the acting owner is resolved server-side from the oauth2-proxy
+ *  headers, never from this body), then hydrates the fresh world snapshot the
+ *  server returns so the UI re-renders without a second fetch — the same install
+ *  step bootstrapWorld() performs at boot. Throws with the server's message on a
+ *  non-2xx response so the caller can surface it inline. */
+export async function provisionProject(project: string): Promise<World> {
+  const res = await fetch(`${API}/api/provision`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ project }),
+  });
+  if (!res.ok) {
+    let message = `Provisioning failed (${res.status}).`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body?.error) message = body.error;
+    } catch {
+      /* non-JSON error body: keep the status-code message */
+    }
+    throw new Error(message);
+  }
+  const body = (await res.json()) as { ok: boolean; world: World };
+  hydrate(body.world);
+  return body.world;
+}
+
 /** Subscribe to live actions. Returns an unsubscribe function. */
 export function subscribeActions(onAction: (a: ActionEvent) => void): () => void {
   if (!IS_LIVE) return () => {};
