@@ -35,8 +35,10 @@ architecture.
 10. **Audit**: who consumes the trail (CTO, compliance, security)? Retention period? SIEM export
     (Sentinel?) required? Tamper-evidence expectations?
 11. **Licence posture**: MIT/Apache/BSD confirmed as acceptable — is MPL-2.0 tolerable
-    (affects OpenBao)? Are non-OSI model licences (Gemma Terms of Use) acceptable for an
-    *embedded* model, or must the local model be Apache-2.0 (Qwen/OLMo class)?
+    (affects OpenBao)? The embedded-model licence question has resolved itself: Gemma 4 is
+    Apache-2.0 (Google dropped the Gemma Terms of Use in April 2026), so the whole default local
+    stack — Gemma 4 primary, gpt-oss fallback, Qwen floor — is permissive (ADR-016). The question
+    survives only if the site pins an older or non-OSI-licensed model.
 
 ## Operations
 

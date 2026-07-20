@@ -81,7 +81,7 @@ describe('OverviewTab (mock world)', () => {
     const panel = screen.getByText('System').closest('.card') as HTMLElement;
     expect(within(panel).getByText('blue · foreman:c4d9a2')).toBeInTheDocument();
     expect(within(panel).getByText('9h')).toBeInTheDocument();
-    expect(within(panel).getByText('qwen3-8b (Q4)')).toBeInTheDocument();
+    expect(within(panel).getByText('gemma-4-31b (QAT 8-bit)')).toBeInTheDocument();
     expect(within(panel).getByText('anthropic, openai')).toBeInTheDocument();
     expect(within(panel).getByText('4m ago')).toBeInTheDocument();
     const pendingRebuilds = within(panel).getByText('Pending rebuilds').closest('dt') as HTMLElement;

@@ -146,8 +146,9 @@ degraded commodity path. The `rules` path is pure Python and architecture-neutra
 The `models` path relies on aarch64 wheels: `transformers`, `medspacy` and
 `onnxruntime` publish manylinux/aarch64 wheels, and `torch` comes from NVIDIA's
 aarch64 CUDA index on the appliance. On the DGX Spark's 128 GB unified memory the
-BERT-class checkpoints (184M ≈ 370 MB, 434M ≈ 870 MB fp16) co-reside with gpt-oss
-and the OCR model without a memory-budget trade-off.
+BERT-class checkpoints (184M ≈ 370 MB, 434M ≈ 870 MB fp16) co-reside with the
+Gemma 4 31B agent model (ADR-016) and the OCR model without a memory-budget
+trade-off.
 
 Images are built on a host or the appliance, never in CI — this repository does
 not build images in CI (Docker-in-Docker with bind mounts is broken in the dev

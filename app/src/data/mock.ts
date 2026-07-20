@@ -74,7 +74,7 @@ const elementPaths: [string, ElementKind][] = [
   ['src/auth/oidc.ts', 'file'], ['src/export/csv.ts', 'file'],
   ['src/dashboard/revenue.tsx', 'file'], ['compose.yaml', 'config'],
   ['foreman.toml', 'config'], ['service:gateway', 'service'],
-  ['service:audit-sidecar', 'service'], ['model:qwen3-8b', 'model'],
+  ['service:audit-sidecar', 'service'], ['model:gemma-4-31b', 'model'],
   ['vault:project-aurora', 'vault'], ['reports/q2-usage.tex', 'file'],
 ];
 export const elements: ElementInfo[] = elementPaths.map(([path, kind], i) => ({
@@ -206,7 +206,7 @@ export const systemStatus: SystemStatus = {
   uptimeHours: 9,
   pendingRebuildChanges: 0,
   auditChainVerifiedAt: NOW - 4 * MIN,
-  localModel: 'qwen3-8b (Q4)',
+  localModel: 'gemma-4-31b (QAT 8-bit)',
   providersOnline: ['anthropic', 'openai'],
 };
 
@@ -218,7 +218,7 @@ export const configOptions: ConfigOption[] = [
   { key: 'providers.openai.enabled', label: 'OpenAI', help: 'Route agent calls to OpenAI.', whenToUse: 'Alternative or fallback provider. Enable if a workload prefers it.', applyClass: 'live', type: 'boolean', value: true, group: 'Cloud providers', tab: 'providers' },
   { key: 'providers.deepseek.enabled', label: 'DeepSeek', help: 'Route to the DeepSeek hosted API.', whenToUse: 'Leave off for personal or regulated data: hosted in China, no UK/EU adequacy. Self-host the open weights instead.', applyClass: 'live', type: 'boolean', value: false, group: 'Cloud providers', tab: 'providers' },
   { key: 'providers.glm.enabled', label: 'GLM (Zhipu)', help: 'Route to the GLM hosted API.', whenToUse: 'Same residency caveat as DeepSeek. Dev and non-sensitive workloads only.', applyClass: 'live', type: 'boolean', value: false, group: 'Cloud providers', tab: 'providers' },
-  { key: 'models.local.name', label: 'Embedded model', help: 'Local model that runs with no provider key. Weights are baked in and served inside the box.', whenToUse: 'Keeps the sandbox working offline and cheap for background tasks. gemma-4-31b (Apache-2.0, 256K context) is the quality pick where the GPU allows: ~18GB at 4-bit, ~35GB at the 8-bit QAT build. The two gpt-oss weights are OpenAI’s open models (Apache-2.0), kept as defence in depth — a second open-weights lineage on the same switch, for clients who want OpenAI-class reasoning but whose data must never reach OpenAI’s API (gpt-oss-20b ~16GB; gpt-oss-120b wants an 80GB GPU). The Qwen and E4B builds are the CPU-class floor. Changing which weights ship is a rebuild.', applyClass: 'rebuild', type: 'enum', value: 'qwen3-8b', options: ['qwen3-4b', 'qwen3-8b', 'gemma-4-e4b', 'gemma-4-31b', 'gpt-oss-20b', 'gpt-oss-120b'], group: 'Local model', tab: 'providers' },
+  { key: 'models.local.name', label: 'Embedded model', help: 'Local model that runs with no provider key. Weights are baked in and served inside the box.', whenToUse: 'Keeps the sandbox working offline and cheap for background tasks. gemma-4-31b (Apache-2.0, 256K context) is the quality pick where the GPU allows: ~18GB at 4-bit, ~35GB at the 8-bit QAT build. The two gpt-oss weights are OpenAI’s open models (Apache-2.0), kept as defence in depth — a second open-weights lineage on the same switch, for clients who want OpenAI-class reasoning but whose data must never reach OpenAI’s API (gpt-oss-20b ~16GB; gpt-oss-120b wants an 80GB GPU). The Qwen and E4B builds are the CPU-class floor. Changing which weights ship is a rebuild.', applyClass: 'rebuild', type: 'enum', value: 'gemma-4-31b', options: ['qwen3-4b', 'qwen3-8b', 'gemma-4-e4b', 'gemma-4-31b', 'gpt-oss-20b', 'gpt-oss-120b'], group: 'Local model', tab: 'providers' },
   { key: 'models.local.runtime', label: 'Local runtime', help: 'The server that runs the embedded weights and exposes an OpenAI-compatible API inside the box.', whenToUse: 'llama.cpp is the lean CPU-first default and carries Gemma 4’s multi-token prediction (MTP) speculative decoding — roughly 1.4–2.2× faster generation for ~2GB of extra headroom. Use vLLM on a GPU host for gpt-oss-120b throughput. gpt-oss needs a runtime that speaks OpenAI’s harmony response format — all three listed do.', applyClass: 'rebuild', type: 'enum', value: 'llama.cpp', options: ['llama.cpp', 'ollama', 'vllm'], group: 'Local model', tab: 'providers' },
   { key: 'models.local.endpoint', label: 'Local endpoint', help: 'OpenAI-compatible base URL the gateway routes local calls to.', whenToUse: 'Leave as the in-box service address unless you serve the model from another host. Because it is OpenAI-compatible, gpt-oss reaches the agent through the same code path as the cloud OpenAI provider — only the URL differs, and nothing leaves the box.', applyClass: 'live', type: 'string', value: 'http://local-model:11434/v1', group: 'Local model', tab: 'providers' },
   { key: 'models.default_route', label: 'Agent route', help: 'Which model an agent uses when nothing is specified. This is the agent feature’s local/cloud switch.', whenToUse: 'Cloud providers give the strongest reasoning; local keeps a workload fully private on the embedded model. Point everyday work at the cheapest option that clears the bar; reserve the strong model for overhauls.', applyClass: 'session', type: 'enum', value: 'anthropic', options: ['anthropic', 'openai', 'local'], group: 'Routing', tab: 'providers' },

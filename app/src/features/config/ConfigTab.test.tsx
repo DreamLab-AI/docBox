@@ -102,7 +102,7 @@ describe('ConfigTab — rebuild plan', () => {
     const dialog = screen.getByRole('dialog', { name: 'Rebuild plan' });
     // The changed key and its from→to values are itemised.
     expect(within(dialog).getByText('models.local.name')).toBeInTheDocument();
-    expect(within(dialog).getByText('qwen3-8b')).toBeInTheDocument();     // from
+    expect(within(dialog).getByText('gemma-4-31b')).toBeInTheDocument();  // from
     expect(within(dialog).getByText('gpt-oss-20b')).toBeInTheDocument();  // to
     // The rebuild sequence is spelled out.
     expect(within(dialog).getByText('Build image')).toBeInTheDocument();

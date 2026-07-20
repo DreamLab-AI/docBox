@@ -81,7 +81,7 @@ describe('App shell', () => {
     expect(bar.queryByText('live')).toBeNull();
     expect(bar.getByText(sys.activeStack)).toBeInTheDocument(); // 'blue'
     expect(bar.getByText(`· ${sys.imageTag}`)).toBeInTheDocument(); // '· foreman:c4d9a2'
-    expect(bar.getByText(sys.localModel)).toBeInTheDocument(); // 'qwen3-8b (Q4)'
+    expect(bar.getByText(sys.localModel)).toBeInTheDocument(); // 'gemma-4-31b (QAT 8-bit)'
     expect(bar.getByText('4m ago')).toBeInTheDocument(); // audit verified NOW-4min
   });
 

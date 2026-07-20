@@ -4,7 +4,8 @@ Status: Accepted · Date: 2026-07-17 · Deciders: DreamLab · Applies to: `docto
 
 ## Context
 
-The `doctorBox` demonstrator runs a stack of local models at once: gpt-oss for the agent mesh, the
+The `doctorBox` demonstrator runs a stack of local models at once: the Gemma 4 31B agent model
+([ADR-016](./ADR-016-in-box-agent-model.md)) for the agent mesh, the
 OpenMed NER checkpoints for grounding ([ADR-012](./ADR-012-clinical-grounding-stack.md)), a vision
 model for OCR (PRD-007), and the FHIR/SQLite corpus store
 ([ADR-014](./ADR-014-corpus-store-lexical-index-and-graph.md)). The demonstrator's central promise to
@@ -12,8 +13,9 @@ an NHS audience is that a patient's records can be reasoned over with nothing le
 of that should run locally rather than reach for a cloud model.
 
 On a commodity host with a single discrete GPU — say 24 GB of VRAM — these models contend for memory.
-gpt-oss-20b alone takes 13–16 GB, which is why [ADR-012](./ADR-012-clinical-grounding-stack.md)
-carried a CPU-pinning trade-off (keep the NER models on CPU so gpt-oss keeps the GPU) and why the
+A 31B-class agent model takes 17–20 GB even at 4-bit, which is why
+[ADR-012](./ADR-012-clinical-grounding-stack.md) carried a CPU-pinning trade-off (keep the NER
+models on CPU so the agent model keeps the GPU) and why the
 local OCR route defaulted to a small model. The [demonstrator brief](../../demonstrator-brief.md)
 also relaxes the permissive-only rule for `doctorBox` and scopes the work to a single patient, both of
 which make a larger, more accurate local stack worth running — if the hardware has the memory for it.
@@ -23,10 +25,16 @@ which make a larger, more accurate local stack worth running — if the hardware
 **`doctorBox`'s demonstrator targets an NVIDIA DGX Spark.** The relevant properties:
 
 - **GB10 Grace Blackwell superchip** with **128 GB of unified LPDDR5X memory** shared between CPU and
-  GPU. The whole local stack co-resides — gpt-oss, the OpenMed checkpoints, a vision OCR model, and
-  the store — with headroom, so the CPU-pinning trade-off is unnecessary on this platform.
-- **FP4 / NVFP4 acceleration**, which is what makes gpt-oss (MXFP4 weights) and larger models run
-  fast rather than merely fit.
+  GPU. The whole local stack co-resides — the Gemma 4 31B agent model, the OpenMed checkpoints, a
+  vision OCR model, and the store — with headroom, so the CPU-pinning trade-off is unnecessary on
+  this platform. The headroom is what buys **quality-first serving**
+  ([ADR-016](./ADR-016-in-box-agent-model.md)): the 8-bit QAT build (~35 GB) as default, BF16
+  (~70 GB) where the appliance profile allows, with MTP speculative decoding (~1.4–2.2× on
+  llama.cpp for ~2 GB of headroom) reclaiming the dense-decode cost — rather than the 4-bit build a
+  commodity box is forced to.
+- **FP4 / NVFP4 acceleration**, which is what makes quantised local models run fast rather than
+  merely fit — Gemma 4 ships NVFP4 quants and QAT checkpoints that sit directly on this path, and
+  gpt-oss (MXFP4 weights) benefits the same way.
 - **ARM64 (aarch64)**, so the container images and the Python NER sidecar build for aarch64.
 - A **single self-contained desktop appliance**, which matches the demonstrator's loopback-only,
   zero-inbound posture (PRD-005): everything the demo needs is on one machine.
@@ -43,7 +51,7 @@ this target is `doctorBox`'s alone.
 ## Consequences
 
 - **Serving simplifies on this platform.** No CPU/GPU memory juggling; the NER sidecar, the OCR
-  model, and gpt-oss run together in unified memory.
+  model, and the Gemma 4 agent model run together in unified memory.
 - **The build is aarch64-first for the runtime images.** The Python sidecar and any native Node
   dependency (better-sqlite3, onnxruntime) need aarch64 wheels or an in-image build. CI on x86
   runners still typechecks, builds and tests the TypeScript unchanged; the arm64 images are the

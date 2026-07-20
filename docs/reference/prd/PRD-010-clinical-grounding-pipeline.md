@@ -106,6 +106,16 @@ entities that token-level NER does not produce. Output is constrained to the sch
 runs on the routed model like any other agent call: local or cloud, per project, per the same
 switch discipline as PRD-007.
 
+Two operating constraints bind this pass ([ADR-016](../adr/ADR-016-in-box-agent-model.md), from the
+production evidence in the RuVector digest `docbox-research-meda-local-llm-benchmark`). **Thinking
+is off**: reasoning chains ahead of temperature-0 schema-constrained output are measured overhead
+(38–82% of tokens in the benchmarked stacks), so the pass runs with the model's thinking switch
+disabled; reasoning spend belongs in the mesh, not here. **The prompt holds the secretarial
+register**: the pass transcribes what the document asserts and never evaluates it — the benchmark's
+scribe-role model, prompted loosely, went beyond omission and actively endorsed planted prescribing
+errors. The EvidenceSpan exact-quote contract enforces the same rule structurally; the prompt is
+written to match it, and both survive a model swap.
+
 ### The Claim
 
 Named "Claim" because it can be contradicted or superseded; that mutability is the point.

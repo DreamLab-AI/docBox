@@ -18,7 +18,8 @@ runs it unchanged and `doctorBox` reaches past it only where accuracy warrants.
 The stack must: recognise diseases, drugs and chemicals, anatomy and oncology-specific entities in
 English clinical prose; determine assertion status, because "no chest pain" must not become a
 chest-pain Claim and a drug listed under *Allergies* is not a drug under *Current medication*;
-attach section context; and serve alongside gpt-oss-20b (13–16 GB VRAM) without contending for the
+attach section context; and serve alongside the in-box agent model — Gemma 4 31B, 17.5–70 GB
+depending on precision ([ADR-016](./ADR-016-in-box-agent-model.md)) — without contending for the
 GPU.
 
 The verified research digest (RuVector, `docbox-research-openmed`) establishes the field. OpenMed
@@ -53,9 +54,10 @@ TypeScript control plane.**
 gate, a reach to the core over its API — using the Hugging Face transformers token-classification
 pipeline (`aggregation_strategy="simple"`) or ONNX Runtime. BERT-class fp16 footprints are small
 (184M ≈ 370 MB, 434M ≈ 870 MB). On the target DGX Spark (128 GB unified memory,
-[ADR-015](./ADR-015-target-platform-dgx-spark.md)) the NER checkpoints, gpt-oss and the OCR model
-co-reside without contention, so no CPU-pinning trade-off is needed; on a memory-constrained host the
-same small footprints still fit a sub-2 GB GPU slice beside gpt-oss. The sidecar builds for ARM64.
+[ADR-015](./ADR-015-target-platform-dgx-spark.md)) the NER checkpoints, the Gemma 4 agent model and
+the OCR model co-reside without contention, so no CPU-pinning trade-off is needed; on a
+memory-constrained host the same small footprints still fit a sub-2 GB GPU slice beside the agent
+model. The sidecar builds for ARM64.
 Latency of tens to hundreds of milliseconds per model per page is immaterial at ingestion time.
 
 Entity linking is deliberately outside this ADR: OpenMed is NER-only (its roadmap places concept

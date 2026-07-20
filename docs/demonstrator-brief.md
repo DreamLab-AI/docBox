@@ -82,10 +82,12 @@ Four moving parts, each grounded in the research digests held in RuVector `proje
 `doctorBox`'s demonstrator targets an **NVIDIA DGX Spark** — a single desktop appliance with a GB10 Grace
 Blackwell superchip, 128 GB of unified CPU/GPU memory, and FP4 acceleration
 ([ADR-015](reference/adr/ADR-015-target-platform-dgx-spark.md)). Two things follow. The unified
-memory holds the whole local stack at once — gpt-oss for the agents, the OpenMed NER checkpoints, and
-a vision model for OCR all co-resident — so there is no need to pin models to CPU to spare GPU
-memory, and the local route can run a larger, more accurate OCR model than a memory-constrained box
-allows. The appliance is ARM64, so the container images and the Python sidecar build for aarch64. A
+memory holds the whole local stack at once — Gemma 4 31B for the agents
+([ADR-016](reference/adr/ADR-016-in-box-agent-model.md); gpt-oss-20b held beside it as defence in
+depth), the OpenMed NER checkpoints, and a vision model for OCR all co-resident — so there is no
+need to pin models to CPU to spare GPU memory, and the local route can run a high-precision agent
+build (8-bit QAT, BF16 where profiling allows, MTP speculative decoding reclaiming the decode cost)
+and a larger, more accurate OCR model than a memory-constrained box allows. The appliance is ARM64, so the container images and the Python sidecar build for aarch64. A
 single self-contained box also matches the demonstrator's whole posture — loopback-only, zero
 inbound, everything the demo needs on one machine — which is the strongest backing for the "your data
 never leaves the box" message the NHS audience is there to test. `main` stays platform-agnostic;
@@ -151,6 +153,9 @@ The permissive stack below stays the **default and the zero-setup floor** — th
 fully working with nothing but it, and it is `main`'s defining constraint. `doctorBox` reaches past it
 only where a richer component sharpens the demo.
 
+- **Agent model** — Gemma 4 31B primary with gpt-oss-20b as defence in depth, both Apache-2.0
+  (Gemma 4 dropped the custom Gemma licence in April 2026), so the whole agent layer sits inside
+  the zero-setup floor — [ADR-016](reference/adr/ADR-016-in-box-agent-model.md).
 - **Grounding models** — the default is OpenMed (Apache-2.0), medspaCy (permissive), GLiNER-biomed
   (Apache-2.0). John Snow Labs Spark NLP for Healthcare, previously ruled out on licence, is
   available to `doctorBox` on merit (needs a JSL key; its weights are CC-BY-NC-ND) —
@@ -201,6 +206,7 @@ existing series without reuse.
 | **ADR-013** FHIR record + terminology | FHIR R4 internal representation; Medplum TS SDK; dm+d floor with a user mount, and (on `doctorBox`) SNOMED/UMLS embedded on the box; the evidence-plus-validity Claim model. |
 | **ADR-014** Corpus store, lexical index & entity graph | SQLite FTS5 (BM25) as the deterministic lexical tool; the per-document tree and the typed, non-embedded entity graph as the mesh's shared workspace; where the store sits relative to the data plane. |
 | **ADR-015** Target platform: DGX Spark | The `doctorBox` demonstrator's hardware target — GB10 Grace Blackwell, 128 GB unified memory, ARM64, FP4 — and its serving, build, and local-first consequences. |
+| **ADR-016** In-box agent model | Gemma 4 31B primary (quality-first serving: 8-bit QAT/BF16 with MTP speculative decoding); gpt-oss-20b retained as defence in depth; thinking pinned off for structured extraction. |
 | **DDD-004** Clinical corpus bounded context | The formal ubiquitous language and aggregates for the corpus domain; the context map to DDD-001 (control plane), DDD-002 (overhaul lifecycle), DDD-003 (interface). |
 
 ## Reuse of the existing spine
