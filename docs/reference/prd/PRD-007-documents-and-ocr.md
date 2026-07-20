@@ -116,7 +116,12 @@ Which weights `local` serves is itself a config choice (`models.local.name`). Ge
 from the 31B dense down to the E4B edge build) is the quality default, and OpenAI's gpt-oss ships
 alongside it as defence in depth — a second open-weights lineage on the same switch, for clients who
 want OpenAI-class reasoning with nothing leaving the box, and as a cross-check on the primary
-model's output. The Qwen builds remain the CPU-class floor.
+model's output. The Qwen builds remain the CPU-class floor. The full decision record — quality-first
+serving with MTP speculative decoding, the defence-in-depth rationale, the benchmark evidence and
+its caveats — is
+[ADR-016](https://github.com/DreamLab-AI/docBox/blob/doctorBox/docs/reference/adr/ADR-016-in-box-agent-model.md)
+(`docs/reference/adr/ADR-016-in-box-agent-model.md`, maintained on the `doctorBox` branch), which
+applies this same default to the clinical demonstrator's DGX Spark target.
 
 This is the honest position: cloud is allowed everywhere and usually more accurate; local is the
 private option offered on every feature's switch, taken when the data cannot leave.
