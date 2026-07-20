@@ -99,7 +99,7 @@ material, not once for the whole box.
 
 | Feature | Switch | Values | `local` is |
 |---|---|---|---|
-| Agent (text) | model route (PRD-003) | anthropic · openai · google · local | gpt-oss in-box |
+| Agent (text) | model route (PRD-003) | anthropic · openai · google · local | the embedded model (Gemma 4 / gpt-oss / Qwen) |
 | OCR | `ocr.route` | local · openai · mistral · gemini | Qwen-VL in-box |
 | Future features | `<feature>.route` | provider peers · local | the in-box option |
 
@@ -111,6 +111,12 @@ Reading of the switch:
   where accuracy matters more than residency.
 - Because the choice is per project and live-class (PRD-001), an operator can send routine scans to
   a cloud OCR while keeping a sensitive project's documents on the in-box model, at the same time.
+
+Which weights `local` serves is itself a config choice (`models.local.name`). Gemma 4 (Apache-2.0,
+from the 31B dense down to the E4B edge build) is the quality default, and OpenAI's gpt-oss ships
+alongside it as defence in depth — a second open-weights lineage on the same switch, for clients who
+want OpenAI-class reasoning with nothing leaving the box, and as a cross-check on the primary
+model's output. The Qwen builds remain the CPU-class floor.
 
 This is the honest position: cloud is allowed everywhere and usually more accurate; local is the
 private option offered on every feature's switch, taken when the data cannot leave.

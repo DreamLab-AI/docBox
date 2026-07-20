@@ -5,7 +5,7 @@ Status: Accepted · 2026-07-16 · Cross-cutting; governs ADR-001 through ADR-008
 ## Context
 
 Three rounds of building revealed a shape we did not set out to design but kept arriving at: a
-small, stable centre with a growing set of optional pieces around it. Documents, OCR, gpt-oss, the
+small, stable centre with a growing set of optional pieces around it. Documents, OCR, the
 companion extension, the local model, the possible streamed desktop — each landed as an addition
 that did not change the centre. That is a signal, and this ADR names it so the next surface is
 built to the same shape instead of against it.
